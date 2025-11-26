@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Neon Dash</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+    <div id="app">
+        <div class="ui-layer">
+            <h1 class="game-title">NEON DASH</h1>
+            <div id="score-container">SCORE: <span id="score">0</span></div>
+
+            <div id="start-screen" class="screen active">
+                <p>Press SPACE or CLICK to Start</p>
+            </div>
+
+            <div id="level-select-screen" class="screen">
+                <h2>SELECT LEVEL</h2>
+                <div class="level-grid">
+                    <button class="level-btn unlocked" data-level="1">
+                        <div class="level-number">1</div>
+                        <div class="level-name">Beginner</div>
+                    </button>
+                    <button class="level-btn locked" data-level="2">
+                        <div class="level-number">2</div>
+                        <div class="level-name">Easy</div>
+                    </button>
+                    <button class="level-btn locked" data-level="3">
+                        <div class="level-number">3</div>
+                        <div class="level-name">Medium</div>
+                    </button>
+                    <button class="level-btn locked" data-level="4">
+                        <div class="level-number">4</div>
+                        <div class="level-name">Hard</div>
+                    </button>
+                    <button class="level-btn locked" data-level="5">
+                        <div class="level-number">5</div>
+                        <div class="level-name">Expert</div>
+                    </button>
+                    <button class="level-btn locked" data-level="6">
+                        <div class="level-number">6</div>
+                        <div class="level-name">Insane</div>
+                    </button>
+                </div>
+                <button id="customize-btn" class="customize-button">🎨 Customize Cube</button>
+                <p class="back-hint">Press ESC to go back</p>
+            </div>
+
+            <div id="customize-screen" class="screen">
+                <h2>CUSTOMIZE PLAYER</h2>
+                <div class="customize-container">
+                    <div class="preview-section">
+                        <h3>Preview</h3>
+                        <canvas id="preview-canvas" width="200" height="200"></canvas>
+                    </div>
+                    <div class="options-section">
+                        <div class="color-section">
+                            <h3>Choose Color</h3>
+                            <div class="color-presets">
+                                <button class="color-preset active" data-color="#00f3ff"
+                                    style="background: #00f3ff;"></button>
+                                <button class="color-preset" data-color="#ff0055" style="background: #ff0055;"></button>
+                                <button class="color-preset" data-color="#00ff00" style="background: #00ff00;"></button>
+                                <button class="color-preset" data-color="#ffcc00" style="background: #ffcc00;"></button>
+                                <button class="color-preset" data-color="#ff6600" style="background: #ff6600;"></button>
+                                <button class="color-preset" data-color="#9933ff" style="background: #9933ff;"></button>
+                                <button class="color-preset" data-color="#ffffff" style="background: #ffffff;"></button>
+                                <button class="color-preset" data-color="#ff1744" style="background: #ff1744;"></button>
+                            </div>
+                            <div class="custom-color-picker">
+                                <label for="color-input">Custom:</label>
+                                <input type="color" id="color-input" value="#00f3ff">
+                            </div>
+                        </div>
+                        <div class="shape-section">
+                            <h3>Choose Shape</h3>
+                            <div class="shape-grid">
+                                <button class="shape-btn active" data-shape="square">
+                                    <div class="shape-label">■ Square</div>
+                                </button>
+                                <button class="shape-btn" data-shape="circle">
+                                    <div class="shape-label">● Circle</div>
+                                </button>
+                                <button class="shape-btn" data-shape="triangle">
+                                    <div class="shape-label">▲ Triangle</div>
+                                </button>
+                                <button class="shape-btn" data-shape="diamond">
+                                    <div class="shape-label">◆ Diamond</div>
+                                </button>
+                                <button class="shape-btn" data-shape="hexagon">
+                                    <div class="shape-label">⬡ Hexagon</div>
+                                </button>
+                                <button class="shape-btn" data-shape="star">
+                                    <div class="shape-label">★ Star</div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p class="back-hint">Press ESC to go back</p>
+            </div>
+
+            <div id="game-over-screen" class="screen">
+                <h2>CRASHED!</h2>
+                <p>Press SPACE to Restart Level</p>
+                <p class="back-hint">Press ESC for Level Select</p>
+            </div>
+
+            <div id="level-complete-screen" class="screen">
+                <h2>LEVEL COMPLETE!</h2>
+                <p id="level-complete-message">Level Unlocked!</p>
+                <p>Press SPACE to Continue</p>
+                <p class="back-hint">Press ESC for Level Select</p>
+            </div>
+
+            <div id="wasted-screen" class="screen">
+                <h2 class="wasted-text">WASTED</h2>
+            </div>
+
+            <div id="current-level-display">LEVEL <span id="current-level-num">1</span></div>
+        </div>
+        <canvas id="game-canvas"></canvas>
+    </div>
+    <script src="./main.js"></script>
+</body>
+
+</html>

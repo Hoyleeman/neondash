@@ -20,15 +20,15 @@ const LEVELS = {
     5: { name: 'Expert', length: 20000, speed: 11, spawnRate: 0.07, minDistance: 300, difficulty: 5 },
     6: { name: 'Insane', length: 23000, speed: 12, spawnRate: 0.08, minDistance: 280, difficulty: 6 },
     7: { name: 'Demon', length: 27000, speed: 13, spawnRate: 0.09, minDistance: 260, difficulty: 7 },
-    8: { name: 'Void', length: 30000, speed: 14, spawnRate: 0.10, minDistance: 240, difficulty: 8 },
-    9: { name: 'Omega', length: 38000, speed: 15, spawnRate: 0.11, minDistance: 220, difficulty: 9 },
-    10: { name: 'Infinity', length: 45000, speed: 16, spawnRate: 0.12, minDistance: 200, difficulty: 10 }
+    8: { name: 'Void', length: 30000, speed: 14, spawnRate: 0.108, minDistance: 240, difficulty: 8 },
+    9: { name: 'Omega', length: 55000, speed: 15, spawnRate: 0.11, minDistance: 220, difficulty: 9 },
+    10: { name: 'Infinity', length: 995000, speed: 16, spawnRate: 0.12, minDistance: 200, difficulty: 10 }
 };
 
 // Physics Constants
 const GRAVITY = 1.8;
 const JUMP_FORCE = -19;
-const GROUND_HEIGHT = 100;
+const GROUND_HEIGHT = 110;
 
 // Input
 let keys = {};
@@ -1467,6 +1467,7 @@ document.getElementById('customize-btn').addEventListener('click', () => {
 loadProgress();
 init();
 loop();
+
 
 
 

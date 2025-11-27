@@ -16,7 +16,16 @@
     <div id="app">
         <div class="ui-layer">
             <h1 class="game-title">HOYLE HOPS</h1>
-            <div id="score-container">SCORE: <span id="score">0</span></div>
+            <div id="score-container">
+                <div style="font-size: 1rem; opacity: 0.7;">HIGH SCORE</div>
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;"><span id="high-score-display">0</span></div>
+                <div style="font-size: 0.9rem; opacity: 0.6;">SCORE</div>
+                <div style="font-size: 1.5rem;"><span id="score">0</span></div>
+            </div>
+            <div id="currency-container">
+                <div class="stat-item">🏆 <span id="high-score">0</span></div>
+                <div class="stat-item">🪙 <span id="coin-count">0</span></div>
+            </div>
 
             <div id="start-screen" class="screen active">
                 <p>Press SPACE or CLICK to Start</p>
@@ -66,74 +75,64 @@
                         <div class="level-name">Infinity</div>
                     </button>
                 </div>
-                <button id="customize-btn" class="customize-button">🎨 Customize Cube</button>
-                <p class="back-hint">Press ESC to go back</p>
-            </div>
-
-            <div id="customize-screen" class="screen">
-                <h2>CUSTOMIZE PLAYER</h2>
-                <div class="customize-container">
-                    <div class="preview-section">
-                        <h3>Preview</h3>
-                        <canvas id="preview-canvas" width="200" height="200"></canvas>
-                    </div>
-                    <div class="options-section">
-                        <div class="color-section">
-                            <h3>Choose Color</h3>
-                            <div class="color-presets">
-                                <button class="color-preset active" data-color="#00f3ff"
-                                    style="background: #00f3ff;"></button>
-                                <button class="color-preset" data-color="#ff0055" style="background: #ff0055;"></button>
-                                <button class="color-preset" data-color="#00ff00" style="background: #00ff00;"></button>
-                                <button class="color-preset" data-color="#ffcc00" style="background: #ffcc00;"></button>
-                                <button class="color-preset" data-color="#ff6600" style="background: #ff6600;"></button>
-                                <button class="color-preset" data-color="#9933ff" style="background: #9933ff;"></button>
-                                <button class="color-preset" data-color="#ffffff" style="background: #ffffff;"></button>
-                                <button class="color-preset" data-color="#ff1744" style="background: #ff1744;"></button>
-                            </div>
-                            <div class="custom-color-picker">
-                                <label for="color-input">Custom:</label>
-                                <input type="color" id="color-input" value="#00f3ff">
-                            </div>
-                        </div>
-                        <div class="shape-section">
-                            <h3>Choose Shape</h3>
-                            <div class="shape-grid">
-                                <button class="shape-btn active" data-shape="square">
-                                    <div class="shape-label">■ Square</div>
-                                </button>
-                                <button class="shape-btn" data-shape="circle">
-                                    <div class="shape-label">● Circle</div>
-                                </button>
-                                <button class="shape-btn" data-shape="triangle">
-                                    <div class="shape-label">▲ Triangle</div>
-                                </button>
-                                <button class="shape-btn" data-shape="diamond">
-                                    <div class="shape-label">◆ Diamond</div>
-                                </button>
-                                <button class="shape-btn" data-shape="hexagon">
-                                    <div class="shape-label">⬡ Hexagon</div>
-                                </button>
-                                <button class="shape-btn" data-shape="star">
-                                    <div class="shape-label">★ Star</div>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <button id="customize-btn" class="customize-button">Customize Cube</button>
                 <p class="back-hint">Press ESC to go back</p>
             </div>
 
             <div id="game-over-screen" class="screen">
-                <p>Press SPACE to Restart Level</p>
-                <p class="back-hint">Press ESC for Level Select</p>
+                <h2 style="color: var(--accent-color); margin-bottom: 2rem;">GAME OVER</h2>
+                <div class="game-stats"
+                    style="background: rgba(0,0,0,0.5); padding: 2rem; border-radius: 12px; border: 2px solid var(--accent-color); box-shadow: 0 0 30px rgba(255,0,85,0.3);">
+                    <div
+                        style="font-size: 1.5rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.2);">
+                        <div style="opacity: 0.7; font-size: 1rem; margin-bottom: 0.5rem;">Score</div>
+                        <span id="go-score"
+                            style="color: var(--primary-color); font-size: 3rem; font-weight: 900;">0</span><span
+                            style="font-size: 1.5rem; opacity: 0.7;"></span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <div>
+                            <div style="opacity: 0.6; font-size: 0.9rem;">HIGH SCORE</div>
+                            <div style="font-size: 2rem; color: #ffd700;">⭐ <span id="go-high-score">0</span></div>
+                        </div>
+                        <div>
+                            <div style="opacity: 0.6; font-size: 0.9rem;">COINS EARNED</div>
+                            <div style="font-size: 2rem; color: #ffd700;">🪙 <span id="go-coins">0</span></div>
+                        </div>
+                    </div>
+                </div>
+                <p style="margin-top: 2rem; animation: pulse 1.5s infinite;">Press SPACE to Retry</p>
+                <p style="margin-top: 2rem; animation: pulse 1.5s infinite;">Press ESC for Menu</p>
             </div>
 
             <div id="level-complete-screen" class="screen">
                 <h2>LEVEL COMPLETE!</h2>
-                <p id="level-complete-message">Level Unlocked!</p>
+                <p id="level-complete-message">Great job!</p>
                 <p>Press SPACE to Continue</p>
-                <p class="back-hint">Press ESC for Level Select</p>
+            </div>
+
+            <div id="customize-screen" class="screen">
+                <h2>CUSTOMIZE CUBE</h2>
+                <div style="text-align: right; margin-bottom: 1rem;">
+                    <span style="font-size: 1.2rem;">🪙 <span id="customize-coin-count">0</span></span>
+                </div>
+                <div class="customize-container">
+                    <div class="preview-section">
+                        <canvas id="preview-canvas" width="200" height="200"></canvas>
+                    </div>
+                    <div class="customization-section">
+                        <h3>Colors</h3>
+                        <div class="color-presets"></div>
+                        <div class="custom-color-picker">
+                            <label for="color-input">Custom:</label>
+                            <input type="color" id="color-input" value="#00f3ff">
+                        </div>
+                        <h3 style="margin-top: 1.5rem;">Shapes</h3>
+                        <div class="shape-grid"></div>
+                        <h3 style="margin-top: 1.5rem;">Backgrounds</h3>
+                        <div class="background-grid"></div>
+                    </div>
+                </div>
             </div>
 
             <div id="wasted-screen" class="screen">

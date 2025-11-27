@@ -27,7 +27,7 @@ const LEVELS = {
 
 // Physics Constants
 const GRAVITY = 1.8;
-const JUMP_FORCE = -20;
+const JUMP_FORCE = -18;
 const GROUND_HEIGHT = 100;
 
 // Input
@@ -1467,6 +1467,7 @@ document.getElementById('customize-btn').addEventListener('click', () => {
 loadProgress();
 init();
 loop();
+
 
 
 

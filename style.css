@@ -64,6 +64,18 @@ body {
     text-align: right;
 }
 
+#currency-container {
+    position: absolute;
+    top: 20px;
+    left: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+}
+
 .stat-item {
     display: flex;
     align-items: center;
@@ -511,4 +523,3 @@ body {
 .wasted-effect {
     filter: grayscale(100%) contrast(150%);
 }
-

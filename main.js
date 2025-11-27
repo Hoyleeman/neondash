@@ -300,7 +300,7 @@ class Obstacle {
         this.markedForDeletion = false;
         this.rotation = 0;
 
-        this.w = 40;
+        this.w = 30;
         this.h = 40;
         this.y = canvas.height - GROUND_HEIGHT - this.h;
         this.color = '#ffcc00';
@@ -1467,4 +1467,5 @@ document.getElementById('customize-btn').addEventListener('click', () => {
 loadProgress();
 init();
 loop();
+
 

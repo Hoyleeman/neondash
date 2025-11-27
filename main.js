@@ -2,11 +2,10 @@ const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 
 // Game State
-let gameState = 'START'; // START, LEVEL_SELECT, PLAYING, GAMEOVER, WIN
+let gameState = 'START'; // START, LEVEL_SELECT, PLAYING, GAMEOVER, WIN, CUSTOMIZE
 let score = 0;
 let frameCount = 0;
 let gameSpeed = 9;
-const BASE_SPEED = 9;
 let slowMotionFactor = 1; // 1 = normal, < 1 = slow
 let distanceTraveled = 0;
 let currentLevel = 1;
@@ -14,17 +13,21 @@ let unlockedLevels = 1;
 
 // Level configurations
 const LEVELS = {
-    1: { name: 'Beginner', length: 5000, speed: 7, spawnRate: 0.03, minDistance: 500 },
-    2: { name: 'Easy', length: 7000, speed: 8, spawnRate: 0.04, minDistance: 450 },
-    3: { name: 'Medium', length: 9000, speed: 9, spawnRate: 0.05, minDistance: 400 },
-    4: { name: 'Hard', length: 11000, speed: 10, spawnRate: 0.06, minDistance: 350 },
-    5: { name: 'Expert', length: 13000, speed: 11, spawnRate: 0.07, minDistance: 300 },
-    6: { name: 'Insane', length: 15000, speed: 12, spawnRate: 0.08, minDistance: 250 }
+    1: { name: 'Beginner', length: 5000, speed: 9, spawnRate: 0.03, minDistance: 500, difficulty: 1 },
+    2: { name: 'Easy', length: 7000, speed: 10, spawnRate: 0.04, minDistance: 450, difficulty: 2 },
+    3: { name: 'Medium', length: 9000, speed: 11, spawnRate: 0.05, minDistance: 400, difficulty: 3 },
+    4: { name: 'Hard', length: 11000, speed: 12, spawnRate: 0.06, minDistance: 350, difficulty: 4 },
+    5: { name: 'Expert', length: 13000, speed: 13, spawnRate: 0.07, minDistance: 300, difficulty: 5 },
+    6: { name: 'Insane', length: 15000, speed: 14, spawnRate: 0.08, minDistance: 280, difficulty: 6 },
+    7: { name: 'Demon', length: 18000, speed: 15, spawnRate: 0.09, minDistance: 260, difficulty: 7 },
+    8: { name: 'Void', length: 20000, speed: 16, spawnRate: 0.10, minDistance: 240, difficulty: 8 },
+    9: { name: 'Omega', length: 25000, speed: 17, spawnRate: 0.11, minDistance: 220, difficulty: 9 },
+    10: { name: 'Infinity', length: 30000, speed: 18, spawnRate: 0.12, minDistance: 200, difficulty: 10 }
 };
 
 // Physics Constants
-const GRAVITY = 0.9;
-const JUMP_FORCE = -14;
+const GRAVITY = 1.5;
+const JUMP_FORCE = -20;
 const GROUND_HEIGHT = 100;
 
 // Input
@@ -40,6 +43,7 @@ let finishLine = null;
 let playerExploded = false;
 let deathTime = 0;
 let canRestart = true;
+let bgOffset = 0;
 
 // Customization
 let playerColor = '#00f3ff';
@@ -47,6 +51,161 @@ let playerShape = 'square';
 let previewCanvas;
 let previewCtx;
 let previewRotation = 0;
+
+// Audio
+class SoundManager {
+    constructor() {
+        this.ctx = null;
+        this.isPlaying = false;
+        this.nextNoteTime = 0;
+        this.tempo = 128;
+        this.beatCount = 0;
+        this.initialized = false;
+        this.enabled = true;
+    }
+
+    init() {
+        if (!this.enabled || this.initialized) return;
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) {
+                console.warn('AudioContext not supported');
+                this.enabled = false;
+                return;
+            }
+            this.ctx = new AudioContext();
+            this.initialized = true;
+        } catch (e) {
+            console.error('Failed to init audio:', e);
+            this.enabled = false;
+        }
+    }
+
+    start() {
+        if (!this.enabled) return;
+        try {
+            if (!this.initialized) this.init();
+            if (!this.initialized) return;
+
+            if (this.ctx.state === 'suspended') {
+                this.ctx.resume().catch(e => console.error('Audio resume failed:', e));
+            }
+            if (!this.isPlaying) {
+                this.isPlaying = true;
+                this.nextNoteTime = this.ctx.currentTime;
+                this.scheduler();
+            }
+        } catch (e) {
+            console.error('Audio start failed:', e);
+        }
+    }
+
+    stop() {
+        this.isPlaying = false;
+    }
+
+    scheduler() {
+        if (!this.isPlaying || !this.enabled) return;
+        try {
+            while (this.nextNoteTime < this.ctx.currentTime + 0.1) {
+                this.playBeat(this.nextNoteTime);
+                this.scheduleNextBeat();
+            }
+            requestAnimationFrame(() => this.scheduler());
+        } catch (e) {
+            console.error('Scheduler error:', e);
+            this.stop();
+        }
+    }
+
+    scheduleNextBeat() {
+        const secondsPerBeat = 60.0 / this.tempo;
+        this.nextNoteTime += secondsPerBeat / 4; // 16th notes
+        this.beatCount++;
+    }
+
+    playBeat(time) {
+        try {
+            const step = this.beatCount % 16;
+
+            // Kick
+            if (step % 4 === 0) {
+                this.playKick(time);
+            }
+
+            // Hi-hat
+            if (step % 2 === 0) {
+                this.playHiHat(time);
+            }
+
+            // Bass
+            if (step === 0 || step === 3 || step === 6 || step === 10) {
+                this.playBass(time, 150);
+            } else if (step === 2 || step === 8) {
+                this.playBass(time, 100);
+            }
+        } catch (e) {
+            // Ignore audio errors during playback
+        }
+    }
+
+    playKick(time) {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.frequency.setValueAtTime(150, time);
+        osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5);
+        gain.gain.setValueAtTime(0.8, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+        osc.start(time);
+        osc.stop(time + 0.5);
+    }
+
+    playHiHat(time) {
+        if (!this.ctx) return;
+        const bufferSize = this.ctx.sampleRate * 0.1;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.value = 1000;
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.2, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start(time);
+    }
+
+    playBass(time, freq) {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sawtooth';
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(freq * 2, time);
+        filter.frequency.exponentialRampToValueAtTime(freq, time + 0.2);
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.frequency.setValueAtTime(freq, time);
+        gain.gain.setValueAtTime(0.15, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.3);
+        osc.start(time);
+        osc.stop(time + 0.3);
+    }
+}
+
+const soundManager = new SoundManager();
 
 function spawnObstacle() {
     const levelConfig = LEVELS[currentLevel];
@@ -65,7 +224,17 @@ function spawnObstacle() {
 
     if (canvas.width - lastObstacleX > minDistance) {
         if (Math.random() < levelConfig.spawnRate) {
-            const type = Math.random() > 0.3 ? 'SPIKE' : 'BLOCK';
+            const rand = Math.random();
+            let type = 'BLOCK';
+
+            // Difficulty scaling for obstacles
+            if (levelConfig.difficulty >= 3 && rand > 0.7) type = 'SPIKE';
+            if (levelConfig.difficulty >= 5 && rand > 0.85) type = 'SAW';
+            if (levelConfig.difficulty >= 7 && rand > 0.9) type = 'TRIPLE_SPIKE';
+
+            // Basic random fallback
+            if (type === 'BLOCK' && Math.random() > 0.5) type = 'SPIKE';
+
             obstacles.push(new Obstacle(type, canvas.width + 100));
         }
     }
@@ -80,7 +249,7 @@ class Player {
         this.jumpTimer = 0;
         this.isGrounded = true;
         this.rotation = 0;
-        this.color = playerColor; // Use custom color
+        this.color = playerColor;
     }
 
     jump() {
@@ -88,6 +257,7 @@ class Player {
             this.dy = JUMP_FORCE;
             this.isGrounded = false;
             createParticles(this.x + this.size / 2, this.y + this.size, 5, '#fff');
+            soundManager.start(); // Ensure audio starts on interaction
         }
     }
 
@@ -96,7 +266,7 @@ class Player {
         this.y += this.dy * slowMotionFactor;
 
         if (!this.isGrounded) {
-            this.rotation += 5;
+            this.rotation += 8 * slowMotionFactor; // Faster rotation
         } else {
             const snap = Math.round(this.rotation / 90) * 90;
             this.rotation = snap;
@@ -117,7 +287,6 @@ class Player {
         ctx.shadowBlur = 15;
         ctx.shadowColor = this.color;
 
-        // Draw based on shape
         drawShape(ctx, playerShape, this.size, this.color);
 
         ctx.restore();
@@ -129,26 +298,38 @@ class Obstacle {
         this.type = type;
         this.x = x;
         this.markedForDeletion = false;
+        this.rotation = 0;
+
+        this.w = 40;
+        this.h = 40;
+        this.y = canvas.height - GROUND_HEIGHT - this.h;
+        this.color = '#ffcc00';
 
         if (type === 'SPIKE') {
-            this.w = 40;
-            this.h = 40;
-            this.y = canvas.height - GROUND_HEIGHT - this.h;
             this.color = '#ff0055';
-        } else if (type === 'BLOCK') {
-            this.w = 40;
-            this.h = 40;
-            this.y = canvas.height - GROUND_HEIGHT - this.h;
-            this.color = '#ffcc00';
+        } else if (type === 'TRIPLE_SPIKE') {
+            this.w = 120; // 3 spikes width
+            this.color = '#ff0055';
+        } else if (type === 'SAW') {
+            this.w = 60;
+            this.h = 60;
+            this.y = canvas.height - GROUND_HEIGHT - 30; // Float slightly? No, saws usually on ground or air. Let's put on ground.
+            this.y = canvas.height - GROUND_HEIGHT - this.h / 2; // Center on ground line
+            this.color = '#ff3300';
         }
     }
 
     update() {
         this.x -= gameSpeed * slowMotionFactor;
+        if (this.type === 'SAW') {
+            this.rotation -= 10 * slowMotionFactor;
+        }
         if (this.x + this.w < 0) {
             this.markedForDeletion = true;
-            score++;
-            document.getElementById('score').innerText = score;
+            if (gameState === 'PLAYING') {
+                score++;
+                document.getElementById('score').innerText = score;
+            }
         }
     }
 
@@ -165,7 +346,39 @@ class Obstacle {
             ctx.lineTo(this.x + this.w, this.y + this.h);
             ctx.closePath();
             ctx.fill();
+        } else if (this.type === 'TRIPLE_SPIKE') {
+            // Draw 3 spikes
+            for (let i = 0; i < 3; i++) {
+                let sx = this.x + i * 40;
+                ctx.beginPath();
+                ctx.moveTo(sx, this.y + this.h);
+                ctx.lineTo(sx + 20, this.y);
+                ctx.lineTo(sx + 40, this.y + this.h);
+                ctx.closePath();
+                ctx.fill();
+            }
+        } else if (this.type === 'SAW') {
+            ctx.translate(this.x + this.w / 2, this.y + this.h / 2);
+            ctx.rotate(this.rotation * Math.PI / 180);
+            ctx.beginPath();
+            // Draw saw teeth
+            const radius = this.w / 2;
+            for (let i = 0; i < 8; i++) {
+                ctx.rotate(Math.PI / 4);
+                ctx.moveTo(0, -radius);
+                ctx.lineTo(10, -radius - 10);
+                ctx.lineTo(-10, -radius - 10);
+                ctx.fill();
+            }
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(0, 0, radius / 2, 0, Math.PI * 2);
+            ctx.fill();
         } else {
+            // BLOCK
             ctx.fillRect(this.x, this.y, this.w, this.h);
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
@@ -298,7 +511,7 @@ function init() {
     score = 0;
     distanceTraveled = 0;
 
-    const levelConfig = LEVELS[currentLevel];
+    const levelConfig = LEVELS[currentLevel] || LEVELS[1];
     gameSpeed = levelConfig.speed;
 
     slowMotionFactor = 1;
@@ -464,13 +677,24 @@ function checkCollisions() {
             h: obs.h - 10
         };
 
-        if (
-            pRect.x < obsRect.x + obsRect.w &&
-            pRect.x + pRect.w > obsRect.x &&
-            pRect.y < obsRect.y + obsRect.h &&
-            pRect.y + pRect.h > obsRect.y
-        ) {
-            gameOver();
+        if (obs.type === 'SAW') {
+            // Circle collision for saw
+            const dx = (player.x + player.size / 2) - (obs.x + obs.w / 2);
+            const dy = (player.y + player.size / 2) - (obs.y + obs.h / 2);
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < (player.size / 2 + obs.w / 2 - 10)) {
+                gameOver();
+            }
+        } else {
+            // AABB for blocks/spikes
+            if (
+                pRect.x < obsRect.x + obsRect.w &&
+                pRect.x + pRect.w > obsRect.x &&
+                pRect.y < obsRect.y + obsRect.h &&
+                pRect.y + pRect.h > obsRect.y
+            ) {
+                gameOver();
+            }
         }
     }
 }
@@ -482,6 +706,7 @@ function gameOver() {
     slowMotionFactor = 0.1;
     canRestart = false;
     deathTime = Date.now();
+    soundManager.stop();
 
     document.getElementById('game-canvas').classList.add('wasted-effect');
     document.getElementById('wasted-screen').classList.add('active');
@@ -502,14 +727,15 @@ function gameOver() {
 
 function levelComplete() {
     gameState = 'WIN';
+    soundManager.stop();
     createParticles(player.x + player.size / 2, player.y + player.size / 2, 100, '#00ff00');
     document.getElementById('current-level-display').classList.remove('visible');
 
-    if (currentLevel < 6 && currentLevel >= unlockedLevels) {
+    if (currentLevel < 10 && currentLevel >= unlockedLevels) {
         unlockedLevels = currentLevel + 1;
         localStorage.setItem('neonDashProgress', unlockedLevels.toString());
         document.getElementById('level-complete-message').innerText = `Level ${unlockedLevels} Unlocked!`;
-    } else if (currentLevel === 6) {
+    } else if (currentLevel === 10) {
         document.getElementById('level-complete-message').innerText = 'All Levels Complete!';
     } else {
         document.getElementById('level-complete-message').innerText = 'Level Complete!';
@@ -524,6 +750,7 @@ function update() {
 
     player.update();
     distanceTraveled += gameSpeed * slowMotionFactor;
+    bgOffset -= gameSpeed * 0.2 * slowMotionFactor; // Parallax background
 
     spawnObstacle();
     obstacles.forEach(obs => obs.update());
@@ -542,9 +769,34 @@ function update() {
     checkCollisions();
 }
 
+function drawBackground() {
+    // Gradient Sky
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, '#0f0c29');
+    gradient.addColorStop(1, '#24243e');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Parallax Mountains
+    ctx.save();
+    ctx.fillStyle = '#1a1a2e';
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height);
+    for (let i = 0; i <= canvas.width; i += 100) {
+        const h = 200 + Math.sin((i + Math.abs(bgOffset)) * 0.01) * 50;
+        ctx.lineTo(i, canvas.height - h);
+    }
+    ctx.lineTo(canvas.width, canvas.height);
+    ctx.fill();
+    ctx.restore();
+}
+
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    drawBackground();
+
+    // Floor
     ctx.fillStyle = '#000';
     ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
 
@@ -566,7 +818,7 @@ function draw() {
 
     if (finishLine) finishLine.draw();
 
-    if (!playerExploded) {
+    if (player && !playerExploded) {
         player.draw();
     }
 
@@ -579,10 +831,11 @@ function loop() {
     if (gameState === 'PLAYING') {
         update();
     } else if (gameState === 'GAMEOVER') {
-        if (!playerExploded) {
+        if (player && !playerExploded) {
             player.update();
         }
         obstacles.forEach(obs => obs.update());
+        obstacles = obstacles.filter(obs => !obs.markedForDeletion);
 
         particles.forEach(p => p.update());
         particles = particles.filter(p => p.life > 0);
@@ -632,6 +885,7 @@ function startLevel(level) {
     document.getElementById('level-select-screen').classList.remove('active');
     document.querySelector('.game-title').style.opacity = '0.2';
     document.getElementById('current-level-display').classList.add('visible');
+    soundManager.start();
 }
 
 // Event Listeners
@@ -661,8 +915,9 @@ window.addEventListener('keydown', (e) => {
             document.getElementById('wasted-screen').classList.remove('active');
             document.querySelector('.game-title').style.opacity = '0.2';
             document.getElementById('current-level-display').classList.add('visible');
+            soundManager.start();
         } else if (gameState === 'WIN') {
-            if (currentLevel < 6) {
+            if (currentLevel < 10) {
                 currentLevel++;
                 startLevel(currentLevel);
             } else {
@@ -680,6 +935,9 @@ window.addEventListener('keydown', (e) => {
             document.getElementById('game-over-screen').classList.remove('active');
             document.getElementById('wasted-screen').classList.remove('active');
             document.getElementById('level-complete-screen').classList.remove('active');
+        } else if (gameState === 'CUSTOMIZE') {
+            showLevelSelect();
+            document.getElementById('customize-screen').classList.remove('active');
         }
     }
 });
@@ -698,8 +956,9 @@ window.addEventListener('mousedown', () => {
         document.getElementById('wasted-screen').classList.remove('active');
         document.querySelector('.game-title').style.opacity = '0.2';
         document.getElementById('current-level-display').classList.add('visible');
+        soundManager.start();
     } else if (gameState === 'WIN') {
-        if (currentLevel < 6) {
+        if (currentLevel < 10) {
             currentLevel++;
             startLevel(currentLevel);
         } else {
@@ -773,6 +1032,18 @@ function setPlayerColor(color) {
     document.getElementById('color-input').value = color;
 }
 
+function setPlayerShape(shape) {
+    playerShape = shape;
+    localStorage.setItem('neonDashShape', shape);
+
+    document.querySelectorAll('.shape-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.shape === shape) {
+            btn.classList.add('active');
+        }
+    });
+}
+
 // Load saved color
 const savedColor = localStorage.getItem('neonDashColor');
 if (savedColor) {
@@ -800,36 +1071,13 @@ document.getElementById('color-input').addEventListener('input', (e) => {
     });
 });
 
-// Shape selection
-function setPlayerShape(shape) {
-    playerShape = shape;
-    localStorage.setItem('neonDashShape', shape);
-
-    // Update active state on shape buttons
-    document.querySelectorAll('.shape-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.shape === shape) {
-            btn.classList.add('active');
-        }
-    });
-}
-
-// Shape button clicks
+// Shape buttons
 document.querySelectorAll('.shape-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         setPlayerShape(btn.dataset.shape);
     });
 });
 
-// ESC key handler update for customize screen
-const originalKeyHandler = window.onkeydown;
-window.addEventListener('keydown', (e) => {
-    if (e.code === 'Escape' && gameState === 'CUSTOMIZE') {
-        gameState = 'LEVEL_SELECT';
-        document.getElementById('customize-screen').classList.remove('active');
-        document.getElementById('level-select-screen').classList.add('active');
-    }
-});
-
+// Start
 init();
 loop();

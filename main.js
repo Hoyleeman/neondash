@@ -13,16 +13,16 @@ let unlockedLevels = 1;
 
 // Level configurations
 const LEVELS = {
-    1: { name: 'Beginner', length: 5000, speed: 9, spawnRate: 0.03, minDistance: 500, difficulty: 1 },
-    2: { name: 'Easy', length: 7000, speed: 10, spawnRate: 0.04, minDistance: 450, difficulty: 2 },
-    3: { name: 'Medium', length: 9000, speed: 11, spawnRate: 0.05, minDistance: 400, difficulty: 3 },
-    4: { name: 'Hard', length: 11000, speed: 12, spawnRate: 0.06, minDistance: 350, difficulty: 4 },
-    5: { name: 'Expert', length: 13000, speed: 13, spawnRate: 0.07, minDistance: 300, difficulty: 5 },
-    6: { name: 'Insane', length: 15000, speed: 14, spawnRate: 0.08, minDistance: 280, difficulty: 6 },
-    7: { name: 'Demon', length: 18000, speed: 15, spawnRate: 0.09, minDistance: 260, difficulty: 7 },
-    8: { name: 'Void', length: 20000, speed: 16, spawnRate: 0.10, minDistance: 240, difficulty: 8 },
-    9: { name: 'Omega', length: 25000, speed: 17, spawnRate: 0.11, minDistance: 220, difficulty: 9 },
-    10: { name: 'Infinity', length: 30000, speed: 18, spawnRate: 0.12, minDistance: 200, difficulty: 10 }
+    1: { name: 'Beginner', length: 8000, speed: 7, spawnRate: 0.03, minDistance: 500, difficulty: 1 },
+    2: { name: 'Easy', length: 11000, speed: 8, spawnRate: 0.04, minDistance: 450, difficulty: 2 },
+    3: { name: 'Medium', length: 14000, speed: 9, spawnRate: 0.05, minDistance: 400, difficulty: 3 },
+    4: { name: 'Hard', length: 17000, speed: 10, spawnRate: 0.06, minDistance: 350, difficulty: 4 },
+    5: { name: 'Expert', length: 20000, speed: 11, spawnRate: 0.07, minDistance: 300, difficulty: 5 },
+    6: { name: 'Insane', length: 23000, speed: 12, spawnRate: 0.08, minDistance: 280, difficulty: 6 },
+    7: { name: 'Demon', length: 27000, speed: 13, spawnRate: 0.09, minDistance: 260, difficulty: 7 },
+    8: { name: 'Void', length: 30000, speed: 14, spawnRate: 0.10, minDistance: 240, difficulty: 8 },
+    9: { name: 'Omega', length: 38000, speed: 15, spawnRate: 0.11, minDistance: 220, difficulty: 9 },
+    10: { name: 'Infinity', length: 45000, speed: 16, spawnRate: 0.12, minDistance: 200, difficulty: 10 }
 };
 
 // Physics Constants
@@ -326,12 +326,9 @@ class Obstacle {
         }
         if (this.x + this.w < 0) {
             this.markedForDeletion = true;
-            if (gameState === 'PLAYING') {
-                score++;
-                document.getElementById('score').innerText = score;
-            }
         }
     }
+
 
     draw() {
         ctx.save();
@@ -510,6 +507,8 @@ function init() {
     cubeFragments = [];
     score = 0;
     distanceTraveled = 0;
+    gameStartTime = Date.now(); // Reset timer
+    timeSurvived = 0;
 
     const levelConfig = LEVELS[currentLevel] || LEVELS[1];
     gameSpeed = levelConfig.speed;
@@ -537,6 +536,7 @@ function init() {
         playerShape = savedShape;
     }
 }
+
 
 // Shape drawing function
 function drawShape(context, shape, size, color) {
@@ -699,6 +699,47 @@ function checkCollisions() {
     }
 }
 
+// Economy & Unlocks
+let coins = 0;
+let highScore = 0;
+let unlockedColors = ['#00f3ff'];
+let unlockedShapes = ['square'];
+let unlockedBackgrounds = ['default'];
+let currentBackground = 'default';
+let gameStartTime = 0;
+let timeSurvived = 0;
+
+const SHOP_ITEMS = {
+    colors: {
+        '#00f3ff': 0,
+        '#ff0055': 50,
+        '#00ff00': 100,
+        '#ffcc00': 200,
+        '#ff6600': 300,
+        '#9933ff': 500,
+        '#ffffff': 1000,
+        '#ff1744': 2000
+    },
+    shapes: {
+        'square': 0,
+        'circle': 500,
+        'triangle': 1000,
+        'diamond': 1500,
+        'hexagon': 2500,
+        'star': 5000
+    },
+    backgrounds: {
+        'default': 0,
+        'sunset': 300,
+        'ocean': 500,
+        'forest': 750,
+        'space': 1000,
+        'neon': 1500,
+        'matrix': 2000
+    }
+};
+
+
 function gameOver() {
     if (gameState === 'GAMEOVER') return;
     gameState = 'GAMEOVER';
@@ -707,6 +748,19 @@ function gameOver() {
     canRestart = false;
     deathTime = Date.now();
     soundManager.stop();
+
+    // Economy Update
+    coins += score;
+    if (score > highScore) {
+        highScore = score;
+    }
+    saveProgress();
+    updateUI();
+
+    // Update Game Over Stats
+    document.getElementById('go-score').innerText = score;
+    document.getElementById('go-high-score').innerText = highScore;
+    document.getElementById('go-coins').innerText = score;
 
     document.getElementById('game-canvas').classList.add('wasted-effect');
     document.getElementById('wasted-screen').classList.add('active');
@@ -718,9 +772,10 @@ function gameOver() {
 
     createParticles(player.x + player.size / 2, player.y + player.size / 2, 50, player.color);
 
-    // Allow restart after 1.5 seconds (let wasted animation play)
+    // Allow restart after 1.5 seconds
     setTimeout(() => {
         canRestart = true;
+        document.getElementById('wasted-screen').classList.remove('active');
         document.getElementById('game-over-screen').classList.add('active');
     }, 1500);
 }
@@ -728,18 +783,27 @@ function gameOver() {
 function levelComplete() {
     gameState = 'WIN';
     soundManager.stop();
+
+    // Economy Update
+    coins += score;
+    if (score > highScore) {
+        highScore = score;
+    }
+    saveProgress();
+    updateUI();
+
     createParticles(player.x + player.size / 2, player.y + player.size / 2, 100, '#00ff00');
     document.getElementById('current-level-display').classList.remove('visible');
 
     if (currentLevel < 10 && currentLevel >= unlockedLevels) {
         unlockedLevels = currentLevel + 1;
-        localStorage.setItem('neonDashProgress', unlockedLevels.toString());
         document.getElementById('level-complete-message').innerText = `Level ${unlockedLevels} Unlocked!`;
     } else if (currentLevel === 10) {
         document.getElementById('level-complete-message').innerText = 'All Levels Complete!';
     } else {
         document.getElementById('level-complete-message').innerText = 'Level Complete!';
     }
+    saveProgress();
 
     document.getElementById('level-complete-screen').classList.add('active');
     document.querySelector('.game-title').style.opacity = '1';
@@ -747,6 +811,11 @@ function levelComplete() {
 
 function update() {
     if (gameState !== 'PLAYING') return;
+
+    // Calculate time-based score
+    timeSurvived = Math.floor((Date.now() - gameStartTime) / 1000);
+    score = timeSurvived;
+    document.getElementById('score').innerText = score;
 
     player.update();
     distanceTraveled += gameSpeed * slowMotionFactor;
@@ -769,27 +838,165 @@ function update() {
     checkCollisions();
 }
 
-function drawBackground() {
-    // Gradient Sky
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, '#0f0c29');
-    gradient.addColorStop(1, '#24243e');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Parallax Mountains
-    ctx.save();
-    ctx.fillStyle = '#1a1a2e';
-    ctx.beginPath();
-    ctx.moveTo(0, canvas.height);
-    for (let i = 0; i <= canvas.width; i += 100) {
-        const h = 200 + Math.sin((i + Math.abs(bgOffset)) * 0.01) * 50;
-        ctx.lineTo(i, canvas.height - h);
+function drawBackground() {
+    // Different backgrounds based on currentBackground
+    switch (currentBackground) {
+        case 'sunset':
+            // Sunset gradient
+            const sunsetGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            sunsetGradient.addColorStop(0, '#FF6B6B');
+            sunsetGradient.addColorStop(0.5, '#FFD93D');
+            sunsetGradient.addColorStop(1, '#6C5CE7');
+            ctx.fillStyle = sunsetGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Sun
+            ctx.fillStyle = '#FFE66D';
+            ctx.shadowBlur = 40;
+            ctx.shadowColor = '#FFE66D';
+            ctx.beginPath();
+            ctx.arc(canvas.width * 0.8, canvas.height * 0.3, 60, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            break;
+
+        case 'ocean':
+            // Ocean gradient
+            const oceanGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            oceanGradient.addColorStop(0, '#0077BE');
+            oceanGradient.addColorStop(0.7, '#00B4D8');
+            oceanGradient.addColorStop(1, '#90E0EF');
+            ctx.fillStyle = oceanGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Waves
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height * 0.6 + i * 30);
+                for (let x = 0; x <= canvas.width; x += 50) {
+                    const y = canvas.height * 0.6 + i * 30 + Math.sin((x + bgOffset * (1 + i * 0.5)) * 0.02) * 20;
+                    ctx.lineTo(x, y);
+                }
+                ctx.lineTo(canvas.width, canvas.height);
+                ctx.lineTo(0, canvas.height);
+                ctx.fill();
+            }
+            break;
+
+        case 'forest':
+            // Forest gradient
+            const forestGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            forestGradient.addColorStop(0, '#1B4332');
+            forestGradient.addColorStop(0.6, '#2D6A4F');
+            forestGradient.addColorStop(1, '#40916C');
+            ctx.fillStyle = forestGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Trees silhouette
+            ctx.fillStyle = '#081C15';
+            for (let i = 0; i < canvas.width; i += 80) {
+                const treeX = i + (bgOffset * 0.3) % 80;
+                const treeHeight = 150 + Math.sin(i * 0.1) * 50;
+                ctx.beginPath();
+                ctx.moveTo(treeX, canvas.height);
+                ctx.lineTo(treeX - 20, canvas.height - treeHeight);
+                ctx.lineTo(treeX + 20, canvas.height - treeHeight);
+                ctx.fill();
+            }
+            break;
+
+        case 'space':
+            // Space background
+            ctx.fillStyle = '#0B0C10';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Stars
+            ctx.fillStyle = '#FFFFFF';
+            for (let i = 0; i < 100; i++) {
+                const x = (i * 137.5 + bgOffset * 0.1) % canvas.width;
+                const y = (i * 73.3) % canvas.height;
+                const size = (i % 3) + 1;
+                ctx.fillRect(x, y, size, size);
+            }
+
+            // Nebula effect
+            const nebulaGradient = ctx.createRadialGradient(
+                canvas.width * 0.7, canvas.height * 0.4, 0,
+                canvas.width * 0.7, canvas.height * 0.4, 300
+            );
+            nebulaGradient.addColorStop(0, 'rgba(138, 43, 226, 0.3)');
+            nebulaGradient.addColorStop(1, 'rgba(138, 43, 226, 0)');
+            ctx.fillStyle = nebulaGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            break;
+
+        case 'neon':
+            // Neon city
+            const neonGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            neonGradient.addColorStop(0, '#1a0033');
+            neonGradient.addColorStop(1, '#330066');
+            ctx.fillStyle = neonGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Grid lines
+            ctx.strokeStyle = 'rgba(0, 243, 255, 0.3)';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < canvas.width; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(i + (bgOffset % 50), 0);
+                ctx.lineTo(i + (bgOffset % 50), canvas.height);
+                ctx.stroke();
+            }
+            for (let i = 0; i < canvas.height; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(canvas.width, i);
+                ctx.stroke();
+            }
+            break;
+
+        case 'matrix':
+            // Matrix code rain
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
+            ctx.font = '20px monospace';
+            for (let i = 0; i < 20; i++) {
+                const x = i * 50;
+                const y = ((bgOffset * 2 + i * 100) % (canvas.height + 200)) - 200;
+                const chars = '01';
+                const char = chars[Math.floor((bgOffset + i) % 2)];
+                ctx.fillText(char, x, y);
+            }
+            break;
+
+        default: // 'default'
+            // Original gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#0f0c29');
+            gradient.addColorStop(1, '#24243e');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Parallax Mountains
+            ctx.save();
+            ctx.fillStyle = '#1a1a2e';
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            for (let i = 0; i <= canvas.width; i += 100) {
+                const h = 200 + Math.sin((i + Math.abs(bgOffset)) * 0.01) * 50;
+                ctx.lineTo(i, canvas.height - h);
+            }
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.fill();
+            ctx.restore();
+            break;
     }
-    ctx.lineTo(canvas.width, canvas.height);
-    ctx.fill();
-    ctx.restore();
 }
+
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -862,6 +1069,7 @@ function showLevelSelect() {
     document.querySelector('.game-title').style.opacity = '1';
     document.getElementById('current-level-display').classList.remove('visible');
     updateLevelButtons();
+    updateUI();
 }
 
 function updateLevelButtons() {
@@ -882,11 +1090,13 @@ function startLevel(level) {
     currentLevel = level;
     init();
     gameState = 'PLAYING';
+    gameStartTime = Date.now(); // Start timer
     document.getElementById('level-select-screen').classList.remove('active');
     document.querySelector('.game-title').style.opacity = '0.2';
     document.getElementById('current-level-display').classList.add('visible');
     soundManager.start();
 }
+
 
 // Event Listeners
 window.addEventListener('resize', resize);
@@ -976,6 +1186,7 @@ function showCustomizeScreen() {
     document.querySelector('.game-title').style.opacity = '1';
     initPreviewCanvas();
     updatePreview();
+    renderShopUI();
 }
 
 function initPreviewCanvas() {
@@ -1016,18 +1227,145 @@ function updatePreview() {
     }
 }
 
+function renderShopUI() {
+    // Colors
+    const colorContainer = document.querySelector('.color-presets');
+    colorContainer.innerHTML = '';
+
+    Object.entries(SHOP_ITEMS.colors).forEach(([color, price]) => {
+        const btn = document.createElement('button');
+        btn.className = 'color-preset';
+        btn.dataset.color = color;
+        btn.style.background = color;
+
+        const isUnlocked = unlockedColors.includes(color);
+        if (!isUnlocked) {
+            btn.classList.add('locked-item');
+            const priceTag = document.createElement('div');
+            priceTag.className = 'item-price';
+            priceTag.innerText = price;
+            btn.appendChild(priceTag);
+        }
+
+        if (playerColor === color) btn.classList.add('active');
+
+        btn.addEventListener('click', () => trySelectColor(color, price));
+        colorContainer.appendChild(btn);
+    });
+
+    // Shapes
+    const shapeContainer = document.querySelector('.shape-grid');
+    shapeContainer.innerHTML = '';
+
+    Object.entries(SHOP_ITEMS.shapes).forEach(([shape, price]) => {
+        const btn = document.createElement('button');
+        btn.className = 'shape-btn';
+        btn.dataset.shape = shape;
+
+        const isUnlocked = unlockedShapes.includes(shape);
+        if (!isUnlocked) {
+            btn.classList.add('locked-item');
+            const priceTag = document.createElement('div');
+            priceTag.className = 'item-price';
+            priceTag.innerText = price;
+            btn.appendChild(priceTag);
+        }
+
+        if (playerShape === shape) btn.classList.add('active');
+
+        const label = document.createElement('div');
+        label.className = 'shape-label';
+        let icon = '■';
+        if (shape === 'circle') icon = '●';
+        if (shape === 'triangle') icon = '▲';
+        if (shape === 'diamond') icon = '◆';
+        if (shape === 'hexagon') icon = '⬡';
+        if (shape === 'star') icon = '★';
+        label.innerText = `${icon} ${shape}`;
+
+        btn.appendChild(label);
+        btn.addEventListener('click', () => trySelectShape(shape, price));
+        shapeContainer.appendChild(btn);
+    });
+
+    // Backgrounds
+    const backgroundContainer = document.querySelector('.background-grid');
+    if (backgroundContainer) {
+        backgroundContainer.innerHTML = '';
+        backgroundContainer.style.display = 'grid';
+        backgroundContainer.style.gridTemplateColumns = 'repeat(2, 1fr)';
+        backgroundContainer.style.gap = '0.8rem';
+
+        Object.entries(SHOP_ITEMS.backgrounds).forEach(([bg, price]) => {
+            const btn = document.createElement('button');
+            btn.className = 'shape-btn';
+            btn.dataset.background = bg;
+
+            const isUnlocked = unlockedBackgrounds.includes(bg);
+            if (!isUnlocked) {
+                btn.classList.add('locked-item');
+                const priceTag = document.createElement('div');
+                priceTag.className = 'item-price';
+                priceTag.innerText = price;
+                btn.appendChild(priceTag);
+            }
+
+            if (currentBackground === bg) btn.classList.add('active');
+
+            const label = document.createElement('div');
+            label.className = 'shape-label';
+            label.innerText = bg.charAt(0).toUpperCase() + bg.slice(1);
+
+            btn.appendChild(label);
+            btn.addEventListener('click', () => trySelectBackground(bg, price));
+            backgroundContainer.appendChild(btn);
+        });
+    }
+}
+
+
+function trySelectColor(color, price) {
+    if (unlockedColors.includes(color)) {
+        setPlayerColor(color);
+    } else {
+        if (coins >= price) {
+            if (confirm(`Unlock this color for ${price} coins?`)) {
+                coins -= price;
+                unlockedColors.push(color);
+                setPlayerColor(color);
+                saveProgress();
+                updateUI();
+                renderShopUI();
+            }
+        } else {
+            alert(`Not enough coins! You need ${price} coins.`);
+        }
+    }
+}
+
+function trySelectShape(shape, price) {
+    if (unlockedShapes.includes(shape)) {
+        setPlayerShape(shape);
+    } else {
+        if (coins >= price) {
+            if (confirm(`Unlock this shape for ${price} coins?`)) {
+                coins -= price;
+                unlockedShapes.push(shape);
+                setPlayerShape(shape);
+                saveProgress();
+                updateUI();
+                renderShopUI();
+            }
+        } else {
+            alert(`Not enough coins! You need ${price} coins.`);
+        }
+    }
+}
+
 function setPlayerColor(color) {
     playerColor = color;
     localStorage.setItem('neonDashColor', color);
-
-    // Update active state on presets
-    document.querySelectorAll('.color-preset').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.color === color) {
-            btn.classList.add('active');
-        }
-    });
-
+    renderShopUI(); // Refresh active state
     // Update color input
     document.getElementById('color-input').value = color;
 }
@@ -1035,49 +1373,98 @@ function setPlayerColor(color) {
 function setPlayerShape(shape) {
     playerShape = shape;
     localStorage.setItem('neonDashShape', shape);
+    renderShopUI(); // Refresh active state
+}
 
-    document.querySelectorAll('.shape-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.shape === shape) {
-            btn.classList.add('active');
+function trySelectBackground(bg, price) {
+    if (unlockedBackgrounds.includes(bg)) {
+        setBackground(bg);
+    } else {
+        if (coins >= price) {
+            if (confirm(`Unlock ${bg} background for ${price} coins?`)) {
+                coins -= price;
+                unlockedBackgrounds.push(bg);
+                setBackground(bg);
+                saveProgress();
+                updateUI();
+                renderShopUI();
+            }
+        } else {
+            alert(`Not enough coins! You need ${price} coins.`);
         }
-    });
+    }
 }
 
-// Load saved color
-const savedColor = localStorage.getItem('neonDashColor');
-if (savedColor) {
-    playerColor = savedColor;
+function setBackground(bg) {
+    currentBackground = bg;
+    localStorage.setItem('neonDashBackground', bg);
+    renderShopUI(); // Refresh active state
 }
+
+function saveProgress() {
+    localStorage.setItem('neonDashProgress', unlockedLevels.toString());
+    localStorage.setItem('neonDashCoins', coins.toString());
+    localStorage.setItem('neonDashHighScore', highScore.toString());
+    localStorage.setItem('neonDashUnlockedColors', JSON.stringify(unlockedColors));
+    localStorage.setItem('neonDashUnlockedShapes', JSON.stringify(unlockedShapes));
+    localStorage.setItem('neonDashUnlockedBackgrounds', JSON.stringify(unlockedBackgrounds));
+}
+
+function loadProgress() {
+    const savedLevels = localStorage.getItem('neonDashProgress');
+    if (savedLevels) unlockedLevels = parseInt(savedLevels);
+
+    const savedCoins = localStorage.getItem('neonDashCoins');
+    if (savedCoins) coins = parseInt(savedCoins);
+
+    const savedHighScore = localStorage.getItem('neonDashHighScore');
+    if (savedHighScore) highScore = parseInt(savedHighScore);
+
+    const savedColors = localStorage.getItem('neonDashUnlockedColors');
+    if (savedColors) unlockedColors = JSON.parse(savedColors);
+
+    const savedShapes = localStorage.getItem('neonDashUnlockedShapes');
+    if (savedShapes) unlockedShapes = JSON.parse(savedShapes);
+
+    const savedBackgrounds = localStorage.getItem('neonDashUnlockedBackgrounds');
+    if (savedBackgrounds) unlockedBackgrounds = JSON.parse(savedBackgrounds);
+
+    // Load saved customization
+    const savedColor = localStorage.getItem('neonDashColor');
+    if (savedColor) playerColor = savedColor;
+
+    const savedShape = localStorage.getItem('neonDashShape');
+    if (savedShape) playerShape = savedShape;
+
+    const savedBackground = localStorage.getItem('neonDashBackground');
+    if (savedBackground) currentBackground = savedBackground;
+
+    updateUI();
+}
+
+
+function updateUI() {
+    document.getElementById('coin-count').innerText = coins;
+    document.getElementById('high-score').innerText = highScore;
+    document.getElementById('high-score-display').innerText = highScore;
+    const customizeCoinCount = document.getElementById('customize-coin-count');
+    if (customizeCoinCount) {
+        customizeCoinCount.innerText = coins;
+    }
+}
+
+// Custom color input
+document.getElementById('color-input').addEventListener('input', (e) => {
+    setPlayerColor(e.target.value);
+});
 
 // Customize button
 document.getElementById('customize-btn').addEventListener('click', () => {
     showCustomizeScreen();
 });
 
-// Color preset buttons
-document.querySelectorAll('.color-preset').forEach(btn => {
-    btn.addEventListener('click', () => {
-        setPlayerColor(btn.dataset.color);
-    });
-});
-
-// Custom color input
-document.getElementById('color-input').addEventListener('input', (e) => {
-    setPlayerColor(e.target.value);
-    // Remove active from all presets when using custom color
-    document.querySelectorAll('.color-preset').forEach(btn => {
-        btn.classList.remove('active');
-    });
-});
-
-// Shape buttons
-document.querySelectorAll('.shape-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        setPlayerShape(btn.dataset.shape);
-    });
-});
-
 // Start
+loadProgress();
 init();
 loop();
+

@@ -26,21 +26,7 @@ body {
     position: relative;
     width: 100%;
     height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(180deg, #0f0c29, #302b63, #24243e);
-    transition: filter 0.5s ease;
-}
-
-canvas.wasted-effect {
-    filter: grayscale(100%) sepia(20%) contrast(1.2);
+    overflow: hidden;
 }
 
 .ui-layer {
@@ -75,6 +61,25 @@ canvas.wasted-effect {
     font-size: 1.5rem;
     font-weight: 700;
     text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+    text-align: right;
+}
+
+#currency-container {
+    position: absolute;
+    top: 20px;
+    left: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .screen {
@@ -112,6 +117,25 @@ canvas.wasted-effect {
     font-size: 1.2rem;
     color: #ccc;
     animation: pulse 1.5s infinite;
+}
+
+.game-stats {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    font-size: 1.2rem;
+}
+
+.game-stats div {
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+}
+
+.game-stats span {
+    color: var(--primary-color);
+    font-weight: 700;
 }
 
 #wasted-screen {
@@ -281,7 +305,8 @@ canvas.wasted-effect {
 #current-level-display {
     position: absolute;
     top: 20px;
-    left: 40px;
+    left: 50%;
+    transform: translateX(-50%);
     font-size: 1.5rem;
     font-weight: 700;
     text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
@@ -341,23 +366,18 @@ canvas.wasted-effect {
 
 .preview-section {
     flex: 0 0 200px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.options-section {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
 }
 
 #preview-canvas {
-    background: rgba(0, 0, 0, 0.3);
+    width: 200px;
+    height: 200px;
     border: 2px solid var(--primary-color);
-    border-radius: 12px;
-    box-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.customization-section {
+    flex: 1;
 }
 
 .color-presets {
@@ -370,7 +390,7 @@ canvas.wasted-effect {
 .color-preset {
     width: 50px;
     height: 50px;
-    border: 3px solid transparent;
+    border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -450,6 +470,7 @@ canvas.wasted-effect {
     font-family: var(--font-main);
     color: var(--text-color);
     pointer-events: all;
+    position: relative;
 }
 
 .shape-btn:hover {
@@ -469,4 +490,36 @@ canvas.wasted-effect {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+.locked-item {
+    opacity: 0.5;
+    position: relative;
+}
+
+.locked-item::after {
+    content: '🔒';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5rem;
+    text-shadow: 0 0 5px black;
+}
+
+.item-price {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.8rem;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 2px 5px;
+    border-radius: 4px;
+    white-space: nowrap;
+    color: #ffd700;
+}
+
+.wasted-effect {
+    filter: grayscale(100%) contrast(150%);
 }

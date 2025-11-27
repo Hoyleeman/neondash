@@ -21,7 +21,7 @@ const LEVELS = {
     6: { name: 'Insane', length: 23000, speed: 12, spawnRate: 0.08, minDistance: 280, difficulty: 6 },
     7: { name: 'Demon', length: 27000, speed: 13, spawnRate: 0.09, minDistance: 260, difficulty: 7 },
     8: { name: 'Void', length: 30000, speed: 14, spawnRate: 0.108, minDistance: 240, difficulty: 8 },
-    9: { name: 'Omega', length: 55000, speed: 15, spawnRate: 0.11, minDistance: 220, difficulty: 9 },
+    9: { name: 'Omega', length: 55000, speed: 25, spawnRate: 0.11, minDistance: 220, difficulty: 9 },
     10: { name: 'Infinity', length: 995000, speed: 16, spawnRate: 0.12, minDistance: 200, difficulty: 10 }
 };
 
@@ -1467,6 +1467,7 @@ document.getElementById('customize-btn').addEventListener('click', () => {
 loadProgress();
 init();
 loop();
+
 
 
 

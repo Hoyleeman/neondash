@@ -722,20 +722,20 @@ const SHOP_ITEMS = {
     },
     shapes: {
         'square': 0,
-        'circle': 500,
-        'triangle': 1000,
-        'diamond': 1500,
-        'hexagon': 2500,
-        'star': 5000
+        'circle': 5,
+        'triangle': 10,
+        'diamond': 15,
+        'hexagon': 25,
+        'star': 50
     },
     backgrounds: {
         'default': 0,
-        'sunset': 300,
-        'ocean': 500,
-        'forest': 750,
-        'space': 1000,
-        'neon': 1500,
-        'matrix': 2000
+        'sunset': 3,
+        'ocean': 5,
+        'forest': 7,
+        'space': 10,
+        'neon': 15,
+        'matrix': 20
     }
 };
 
@@ -1467,5 +1467,6 @@ document.getElementById('customize-btn').addEventListener('click', () => {
 loadProgress();
 init();
 loop();
+
 
 

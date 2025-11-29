@@ -1,18 +1,25 @@
 {
-  "name": "geometry-dash-clone",
+  "name": "neondash",
   "version": "1.0.0",
-  "description": "",
+  "description": "A futuristic neon-themed dashboard",
   "main": "main.js",
-  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "start": "npx serve .",
+    "dev": "npx live-server --port=3000",
+    "build": "echo 'No build step required for vanilla JS'",
+    "test": "echo 'No tests configured yet'"
   },
-  "keywords": [],
+  "keywords": [
+    "dashboard",
+    "neon",
+    "cyberpunk",
+    "ui"
+  ],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
-    "vite": "^7.2.4"
+    "live-server": "^1.2.2",
+    "serve": "^14.2.1"
   }
 }
+

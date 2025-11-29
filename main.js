@@ -207,7 +207,7 @@ class SoundManager {
         if (this.audio && !this.isMuted) {
             this.audio.volume = vol;
         }
-        localStorage.setItem('neonDashMusicVolume', vol);
+        localStorage.setItem('jumpHopMusicVolume', vol);
     }
 
     setSfxVolume(vol) {
@@ -215,7 +215,7 @@ class SoundManager {
         if (this.masterGain) {
             this.masterGain.gain.value = vol;
         }
-        localStorage.setItem('neonDashSfxVolume', vol);
+        localStorage.setItem('jumpHopSfxVolume', vol);
     }
 
     // Start music (only call once, keeps playing forever)
@@ -814,12 +814,27 @@ class Player {
             return;
         }
 
-        // Apply gravity - faster fall after double jump
+        // Apply gravity - scales with game speed to ensure landing in time for next jump
         let gravityMultiplier = 1;
+        
+        // Speed-based gravity scaling: faster speeds = stronger gravity
+        // At speed 8 (base), multiplier is 1.0
+        // At speed 20, multiplier is ~1.5
+        // At speed 30, multiplier is ~2.0
+        const speedGravityScale = 1 + (gameSpeed - 8) * 0.045;
+        gravityMultiplier *= Math.max(1, speedGravityScale);
+        
+        // Additional boost when falling after double jump
         if (this.usedDoubleJump && this.dy > 0) {
-            // Falling after double jump - 35% faster gravity
-            gravityMultiplier = 1.35;
+            gravityMultiplier *= 1.35;
         }
+        
+        // When falling (dy > 0), apply extra gravity for snappier landings at high speeds
+        if (this.dy > 0 && gameSpeed > 15) {
+            const fallBoost = 1 + (gameSpeed - 15) * 0.03;
+            gravityMultiplier *= fallBoost;
+        }
+        
         this.dy += GRAVITY * gravityMultiplier * slowMotionFactor * dt;
         this.y += this.dy * slowMotionFactor * dt;
 
@@ -3690,7 +3705,7 @@ window.addEventListener('keydown', (e) => {
             return;
         }
         jumpKey = e.code;
-        localStorage.setItem('neonDashJumpKey', jumpKey);
+        localStorage.setItem('jumpHopJumpKey', jumpKey);
         document.getElementById('bind-jump-btn').innerText = jumpKey === 'Space' ? 'SPACE' : jumpKey;
         document.getElementById('bind-jump-btn').classList.remove('active');
         isBindingKey = false;
@@ -5153,7 +5168,7 @@ function setBackground(bg) {
 }
 
 function saveProgress() {
-    const prefix = `neonDash_${userId}_`;
+    const prefix = `jumpHop_${userId}_`;
     localStorage.setItem(prefix + 'progress', unlockedLevels.toString());
     localStorage.setItem(prefix + 'coins', coins.toString());
     localStorage.setItem(prefix + 'highScore', highScore.toString());
@@ -5167,22 +5182,22 @@ function saveProgress() {
     localStorage.setItem(prefix + 'background', currentBackground);
 
     // Global settings (not per user)
-    localStorage.setItem('neonDashJumpKey', jumpKey);
-    localStorage.setItem('neonDashMusic', isMusicEnabled);
-    localStorage.setItem('neonDashProgressBar', showProgressBar);
-    localStorage.setItem('neonDashLastUser', userId);
+    localStorage.setItem('jumpHopJumpKey', jumpKey);
+    localStorage.setItem('jumpHopMusic', isMusicEnabled);
+    localStorage.setItem('jumpHopProgressBar', showProgressBar);
+    localStorage.setItem('jumpHopLastUser', userId);
 }
 
 function loadProgress() {
     // Load last user
-    const lastUser = localStorage.getItem('neonDashLastUser');
+    const lastUser = localStorage.getItem('jumpHopLastUser');
     if (lastUser) userId = lastUser;
     else {
         userId = generateUserId();
-        localStorage.setItem('neonDashLastUser', userId);
+        localStorage.setItem('jumpHopLastUser', userId);
     }
 
-    const prefix = `neonDash_${userId}_`;
+    const prefix = `jumpHop_${userId}_`;
 
     const savedLevels = localStorage.getItem(prefix + 'progress');
     if (savedLevels) unlockedLevels = parseInt(savedLevels);
@@ -5222,21 +5237,21 @@ function loadProgress() {
     else currentBackground = 'default';
 
     // Load Global Settings
-    const savedJumpKey = localStorage.getItem('neonDashJumpKey');
+    const savedJumpKey = localStorage.getItem('jumpHopJumpKey');
     if (savedJumpKey) jumpKey = savedJumpKey;
 
-    const savedMusic = localStorage.getItem('neonDashMusic');
+    const savedMusic = localStorage.getItem('jumpHopMusic');
     if (savedMusic !== null) isMusicEnabled = JSON.parse(savedMusic);
     
-    const savedProgressBar = localStorage.getItem('neonDashProgressBar');
+    const savedProgressBar = localStorage.getItem('jumpHopProgressBar');
     if (savedProgressBar !== null) showProgressBar = JSON.parse(savedProgressBar);
 
     // Load volume settings
-    const savedMusicVol = localStorage.getItem('neonDashMusicVolume');
+    const savedMusicVol = localStorage.getItem('jumpHopMusicVolume');
     if (savedMusicVol !== null) {
         musicVolume = parseFloat(savedMusicVol);
     }
-    const savedSfxVol = localStorage.getItem('neonDashSfxVolume');
+    const savedSfxVol = localStorage.getItem('jumpHopSfxVolume');
     if (savedSfxVol !== null) {
         sfxVolume = parseFloat(savedSfxVol);
     }
@@ -5292,18 +5307,32 @@ function showSettings() {
     if (gameState === 'SETTINGS') return;
     previousGameState = gameState;
     gameState = 'SETTINGS';
+    
+    // Hide other screens to prevent overlap
+    document.getElementById('level-select-screen').classList.remove('active');
+    document.getElementById('customize-screen').classList.remove('active');
+    document.getElementById('game-over-screen').classList.remove('active');
+    document.getElementById('level-complete-screen').classList.remove('active');
+    
     document.getElementById('settings-modal').classList.add('active');
     updateSettingsUI();
 }
 
 function closeSettings() {
-    gameState = previousGameState;
     document.getElementById('settings-modal').classList.remove('active');
-    // If we were playing, ensure loop continues (it does automatically via RAF)
-    if (gameState === 'PLAYING') {
-        gameStartTime = Date.now() - (score * 1000); // Adjust start time to match score/time? No, score is distance now.
-        // Actually, for distance score, we don't need to adjust time.
+    gameState = previousGameState;
+    
+    // Restore the previous screen
+    if (previousGameState === 'LEVEL_SELECT') {
+        document.getElementById('level-select-screen').classList.add('active');
+    } else if (previousGameState === 'CUSTOMIZE') {
+        document.getElementById('customize-screen').classList.add('active');
+    } else if (previousGameState === 'GAMEOVER') {
+        document.getElementById('game-over-screen').classList.add('active');
+    } else if (previousGameState === 'WIN') {
+        document.getElementById('level-complete-screen').classList.add('active');
     }
+    // If we were playing, the game loop continues automatically
 }
 
 function updateSettingsUI() {
@@ -5330,7 +5359,7 @@ document.getElementById('close-settings-btn').addEventListener('click', closeSet
 
 document.getElementById('toggle-music-btn').addEventListener('click', () => {
     isMusicEnabled = !isMusicEnabled;
-    localStorage.setItem('neonDashMusic', isMusicEnabled);
+    localStorage.setItem('jumpHopMusic', isMusicEnabled);
     updateSettingsUI();
     if (!isMusicEnabled) soundManager.stop();
     else soundManager.resume();
@@ -5338,7 +5367,7 @@ document.getElementById('toggle-music-btn').addEventListener('click', () => {
 
 document.getElementById('toggle-progress-btn').addEventListener('click', () => {
     showProgressBar = !showProgressBar;
-    localStorage.setItem('neonDashProgressBar', showProgressBar);
+    localStorage.setItem('jumpHopProgressBar', showProgressBar);
     updateSettingsUI();
 });
 

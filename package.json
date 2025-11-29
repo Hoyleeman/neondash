@@ -1,25 +1,26 @@
 {
-  "name": "neondash",
-  "version": "1.0.0",
-  "description": "A futuristic neon-themed dashboard",
-  "main": "main.js",
-  "scripts": {
-    "start": "npx serve .",
-    "dev": "npx live-server --port=3000",
-    "build": "echo 'No build step required for vanilla JS'",
-    "test": "echo 'No tests configured yet'"
-  },
-  "keywords": [
-    "dashboard",
-    "neon",
-    "cyberpunk",
-    "ui"
-  ],
-  "author": "",
-  "license": "MIT",
-  "devDependencies": {
-    "live-server": "^1.2.2",
-    "serve": "^14.2.1"
+    "name": "neondash",
+    "version": "1.0.0",
+    "description": "A futuristic neon-themed dashboard",
+    "main": "main.js",
+    "scripts": {
+      "start": "npx serve .",
+      "dev": "npx live-server --port=3000",
+      "build": "echo 'No build step required for vanilla JS'",
+      "test": "echo 'No tests configured yet'"
+    },
+    "keywords": [
+      "dashboard",
+      "neon",
+      "cyberpunk",
+      "ui"
+    ],
+    "author": "",
+    "license": "MIT",
+    "devDependencies": {
+      "live-server": "^1.2.2",
+      "serve": "^14.2.1"
+    }
   }
-}
-
+  
+  

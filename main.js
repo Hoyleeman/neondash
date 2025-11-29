@@ -2,7 +2,7 @@ const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 
 // Game State
-let gameState = 'START'; // START, LEVEL_SELECT, PLAYING, GAMEOVER, WIN, CUSTOMIZE
+let gameState = 'LEVEL_SELECT'; // LEVEL_SELECT, PLAYING, GAMEOVER, WIN, CUSTOMIZE
 let score = 0;
 let frameCount = 0;
 let gameSpeed = 9;
@@ -12,14 +12,16 @@ let currentLevel = 1;
 let unlockedLevels = 1;
 let jumpKey = 'Space';
 let isMusicEnabled = true;
+let showProgressBar = true;
 let isBindingKey = false;
 let landingGracePeriod = 0;
-let previousGameState = 'START';
+let previousGameState = 'LEVEL_SELECT';
 let userId = 'guest';
 let coinsCollectedThisRun = 0; // Track coins earned in current game
 
 // Level configurations
 const LEVELS = {
+    // Quest Levels 1-10 (Original)
     1: { name: 'Beginner', length: 10000, startSpeed: 6, maxSpeed: 9, spawnRate: 0.03, minDistance: 500, difficulty: 1 },
     2: { name: 'Easy', length: 14000, startSpeed: 7, maxSpeed: 10, spawnRate: 0.04, minDistance: 450, difficulty: 2 },
     3: { name: 'Medium', length: 18000, startSpeed: 8, maxSpeed: 11, spawnRate: 0.05, minDistance: 400, difficulty: 3 },
@@ -29,8 +31,33 @@ const LEVELS = {
     7: { name: 'Demon', length: 35000, startSpeed: 12, maxSpeed: 15, spawnRate: 0.09, minDistance: 260, difficulty: 7 },
     8: { name: 'Void', length: 40000, startSpeed: 13, maxSpeed: 16, spawnRate: 0.12, minDistance: 220, difficulty: 8 },
     9: { name: 'Omega', length: 50000, startSpeed: 14, maxSpeed: 17, spawnRate: 0.14, minDistance: 200, difficulty: 9 },
-    10: { name: 'Infinity', length: 60000, startSpeed: 15, maxSpeed: 18, spawnRate: 0.16, minDistance: 180, difficulty: 10 }
+    10: { name: 'Infinity', length: 60000, startSpeed: 15, maxSpeed: 18, spawnRate: 0.16, minDistance: 180, difficulty: 10 },
+    // Quest Levels 11-20 (New)
+    11: { name: 'Abyss', length: 65000, startSpeed: 15, maxSpeed: 19, spawnRate: 0.17, minDistance: 170, difficulty: 11 },
+    12: { name: 'Chaos', length: 70000, startSpeed: 16, maxSpeed: 20, spawnRate: 0.18, minDistance: 160, difficulty: 12 },
+    13: { name: 'Nightmare', length: 75000, startSpeed: 16, maxSpeed: 21, spawnRate: 0.19, minDistance: 150, difficulty: 13 },
+    14: { name: 'Oblivion', length: 80000, startSpeed: 17, maxSpeed: 22, spawnRate: 0.20, minDistance: 145, difficulty: 14 },
+    15: { name: 'Cataclysm', length: 85000, startSpeed: 17, maxSpeed: 23, spawnRate: 0.21, minDistance: 140, difficulty: 15 },
+    16: { name: 'Apocalypse', length: 90000, startSpeed: 18, maxSpeed: 24, spawnRate: 0.22, minDistance: 135, difficulty: 16 },
+    17: { name: 'Armageddon', length: 95000, startSpeed: 18, maxSpeed: 25, spawnRate: 0.23, minDistance: 130, difficulty: 17 },
+    18: { name: 'Extinction', length: 100000, startSpeed: 19, maxSpeed: 26, spawnRate: 0.24, minDistance: 125, difficulty: 18 },
+    19: { name: 'Annihilation', length: 110000, startSpeed: 19, maxSpeed: 27, spawnRate: 0.25, minDistance: 120, difficulty: 19 },
+    20: { name: 'Transcendence', length: 120000, startSpeed: 20, maxSpeed: 28, spawnRate: 0.26, minDistance: 115, difficulty: 20 }
 };
+
+// Unlimited Mode Configuration
+const UNLIMITED_MODE = {
+    name: 'Unlimited',
+    startSpeed: 8,
+    maxSpeed: 30,
+    spawnRate: 0.05,
+    minDistance: 400,
+    difficulty: 1, // Starts easy but ramps up
+    speedRampRate: 0.0003 // How fast difficulty increases over time
+};
+
+let isUnlimitedMode = false;
+let isHardcoreMode = false; // Hardcore: No powerups, no coins
 
 // Physics Constants
 // Physics Constants
@@ -68,6 +95,10 @@ const TARGET_FRAME_TIME = 1000 / TARGET_FPS;
 let shieldCount = 0;
 let isBoosting = false;
 let boostTimer = 0;
+let isBulldozing = false;
+let bulldozerTimer = 0;
+let isGhosting = false;
+let ghostTimer = 0;
 let safeModeTimer = 0; // Grace period after boosting
 
 // Customization
@@ -99,15 +130,15 @@ class SoundManager {
         
         // Playlist of all music tracks
         this.playlist = [
-            'neondashmusic.mp3',
-            'neondashmusic1.mp3',
-            'neondashmusic2.mp3',
-            'neondashmusic3.mp3',
-            'neondashmusic4.mp3',
-            'neondashmusic5.mp3',
-            'neondashmusic6.mp3',
-            'neondashmusic7.mp3',
-            'neondashmusic8.mp3'
+            'https://res.cloudinary.com/do61mfyhn/video/upload/v1764431749/neondashmusic_apwnjb.mp3',
+            'https://res.cloudinary.com/do61mfyhn/video/upload/v1764431731/neondashmusic1_hlczfa.mp3',
+            'https://res.cloudinary.com/do61mfyhn/video/upload/v1764431723/neondashmusic2_fsqfaf.mp3',
+            'https://res.cloudinary.com/do61mfyhn/video/upload/v1764431746/neondashmusic3_f9hzdb.mp3',
+            'https://res.cloudinary.com/do61mfyhn/video/upload/v1764431731/neondashmusic4_oq2npz.mp3',
+            'https://res.cloudinary.com/do61mfyhn/video/upload/v1764431752/neondashmusic5_dmsupr.mp3',
+            'https://res.cloudinary.com/do61mfyhn/video/upload/v1764431741/neondashmusic6_a1v54z.mp3',
+            'https://res.cloudinary.com/do61mfyhn/video/upload/v1764431747/neondashmusic7_cdda3m.mp3',
+            'https://res.cloudinary.com/do61mfyhn/video/upload/v1764431738/neondashmusic8_rdsru0.mp3'
         ];
         this.currentTrackIndex = 0;
     }
@@ -327,6 +358,57 @@ class SoundManager {
         } catch (e) {}
     }
 
+    // BULLDOZER sound - heavy rumble
+    playBulldozer() {
+        if (!this.ctx || !isMusicEnabled) return;
+        try {
+            // Low rumble
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(80, this.ctx.currentTime);
+            osc.frequency.setValueAtTime(100, this.ctx.currentTime + 0.1);
+            osc.frequency.setValueAtTime(60, this.ctx.currentTime + 0.2);
+            gain.gain.setValueAtTime(0.3 * sfxVolume, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(this.ctx.currentTime);
+            osc.stop(this.ctx.currentTime + 0.3);
+        } catch (e) {}
+    }
+    
+    // GHOST sound - ethereal whoosh
+    playGhost() {
+        if (!this.ctx || !isMusicEnabled) return;
+        try {
+            // Ethereal high-pitched sound
+            const osc = this.ctx.createOscillator();
+            const osc2 = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.2);
+            osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.4);
+            
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(1200, this.ctx.currentTime);
+            osc2.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.4);
+            
+            gain.gain.setValueAtTime(0.15 * sfxVolume, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+            
+            osc.connect(gain);
+            osc2.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(this.ctx.currentTime);
+            osc2.start(this.ctx.currentTime);
+            osc.stop(this.ctx.currentTime + 0.4);
+            osc2.stop(this.ctx.currentTime + 0.4);
+        } catch (e) {}
+    }
+
     // BOMB/EXPLOSION sound - deep boom
     playBomb() {
         if (!this.ctx || !isMusicEnabled) return;
@@ -426,14 +508,78 @@ class SoundManager {
 
 const soundManager = new SoundManager();
 
-function spawnObstacle() {
-    const levelConfig = LEVELS[currentLevel];
+// Define which obstacles require double jump (tall/difficult)
+const HARD_OBSTACLES = ['PILLAR', 'LASER', 'MOVING_SAW'];
+const MEDIUM_OBSTACLES = ['SAW', 'TRIPLE_SPIKE'];
 
-    if (distanceTraveled > levelConfig.length) {
-        if (!finishLine) {
-            finishLine = new FinishLine(canvas.width + 500);
+// Get required safe landing distance based on obstacle type and game speed
+function getSafeLandingDistance(obstacleType) {
+    // Base distances for landing safely after each obstacle type
+    // These account for jump arc and landing time
+    const baseDistances = {
+        'PILLAR': 250,      // Tall - needs lots of room to land
+        'LASER': 220,       // Tall - needs room to land after double jump
+        'MOVING_SAW': 200,  // Unpredictable movement - needs safe zone
+        'SAW': 150,         // Medium height
+        'TRIPLE_SPIKE': 180, // Wide obstacle - needs clearance
+        'DOUBLE_SPIKE': 120,
+        'SPIKE': 100,
+        'BLOCK': 80
+    };
+    
+    // Scale landing distance with game speed (faster = need more room)
+    const speedMultiplier = 1 + (gameSpeed - 8) * 0.05; // Increases at higher speeds
+    return (baseDistances[obstacleType] || 100) * speedMultiplier;
+}
+
+// Check if an obstacle type is safe to spawn after the previous one
+function isSafeObstacleCombo(lastType, newType) {
+    // Prevent impossible combos - no hard obstacle right after another hard obstacle
+    if (HARD_OBSTACLES.includes(lastType) && HARD_OBSTACLES.includes(newType)) {
+        return false;
+    }
+    
+    // Don't put a hard obstacle right after a medium one at high speeds
+    if (gameSpeed > 15 && MEDIUM_OBSTACLES.includes(lastType) && HARD_OBSTACLES.includes(newType)) {
+        return false;
+    }
+    
+    // At very high speeds, space out difficult obstacles more
+    if (gameSpeed > 20 && (HARD_OBSTACLES.includes(lastType) || MEDIUM_OBSTACLES.includes(lastType))) {
+        if (HARD_OBSTACLES.includes(newType) || MEDIUM_OBSTACLES.includes(newType)) {
+            return false;
         }
-        return;
+    }
+    
+    return true;
+}
+
+function spawnObstacle() {
+    let levelConfig;
+    let difficulty;
+    let minDistance;
+    let spawnRate;
+    
+    if (isUnlimitedMode) {
+        // Unlimited mode - gradual difficulty scaling based on distance
+        const unlimitedProgress = Math.min(distanceTraveled / 100000, 1); // Max out at 100k distance
+        difficulty = Math.floor(1 + unlimitedProgress * 19); // Scale from 1-20
+        minDistance = Math.max(115, UNLIMITED_MODE.minDistance - unlimitedProgress * 285); // 400 -> 115
+        spawnRate = UNLIMITED_MODE.spawnRate + unlimitedProgress * 0.21; // 0.05 -> 0.26
+        levelConfig = { difficulty, minDistance, spawnRate, length: Infinity };
+    } else {
+        levelConfig = LEVELS[currentLevel];
+        difficulty = levelConfig.difficulty;
+        minDistance = levelConfig.minDistance;
+        spawnRate = levelConfig.spawnRate;
+        
+        // Check for finish line in quest modes
+        if (distanceTraveled > levelConfig.length) {
+            if (!finishLine) {
+                finishLine = new FinishLine(canvas.width + 500);
+            }
+            return;
+        }
     }
 
     // Grace period check
@@ -441,31 +587,55 @@ function spawnObstacle() {
 
     if (distanceTraveled < 800) return;
 
-    const minDistance = levelConfig.minDistance;
-    let lastObstacleX = obstacles.length > 0 ? obstacles[obstacles.length - 1].x : -1000;
+    // Get last obstacle info for safe spawning
+    let lastObstacle = obstacles.length > 0 ? obstacles[obstacles.length - 1] : null;
+    let lastObstacleX = lastObstacle ? lastObstacle.x : -1000;
+    let lastObstacleType = lastObstacle ? lastObstacle.type : null;
+    
+    // Calculate required distance based on last obstacle type
+    let requiredDistance = minDistance;
+    if (lastObstacleType) {
+        const safeLandingDist = getSafeLandingDistance(lastObstacleType);
+        requiredDistance = Math.max(minDistance, safeLandingDist);
+    }
 
-    if (canvas.width - lastObstacleX > minDistance) {
+    if (canvas.width - lastObstacleX > requiredDistance) {
         // Chance to spawn PowerUp instead of Obstacle (spawn safely)
-        if (Math.random() < 0.06) {
+        // Skip powerups entirely in hardcore mode
+        if (!isHardcoreMode && Math.random() < 0.06) {
             spawnPowerUpSafely(canvas.width + 100);
             return;
         }
 
-        if (Math.random() < levelConfig.spawnRate) {
+        if (Math.random() < spawnRate) {
             const rand = Math.random();
             let type = 'BLOCK';
 
             // Difficulty scaling for obstacles - more variety!
-            if (levelConfig.difficulty >= 2 && rand > 0.8) type = 'SPIKE';
-            if (levelConfig.difficulty >= 3 && rand > 0.85) type = 'DOUBLE_SPIKE';
-            if (levelConfig.difficulty >= 4 && rand > 0.88) type = 'PILLAR';
-            if (levelConfig.difficulty >= 5 && rand > 0.9) type = 'SAW';
-            if (levelConfig.difficulty >= 6 && rand > 0.92) type = 'LASER';
-            if (levelConfig.difficulty >= 7 && rand > 0.94) type = 'TRIPLE_SPIKE';
-            if (levelConfig.difficulty >= 8 && rand > 0.96) type = 'MOVING_SAW';
+            if (difficulty >= 2 && rand > 0.8) type = 'SPIKE';
+            if (difficulty >= 3 && rand > 0.85) type = 'DOUBLE_SPIKE';
+            if (difficulty >= 4 && rand > 0.88) type = 'PILLAR';
+            if (difficulty >= 5 && rand > 0.9) type = 'SAW';
+            if (difficulty >= 6 && rand > 0.92) type = 'LASER';
+            if (difficulty >= 7 && rand > 0.94) type = 'TRIPLE_SPIKE';
+            if (difficulty >= 8 && rand > 0.96) type = 'MOVING_SAW';
 
             // Basic random fallback
             if (type === 'BLOCK' && Math.random() > 0.5) type = 'SPIKE';
+            
+            // Safety check: ensure this obstacle combo is possible
+            // If not safe, downgrade to an easier obstacle
+            if (lastObstacleType && !isSafeObstacleCombo(lastObstacleType, type)) {
+                // Downgrade to a safer obstacle type
+                if (HARD_OBSTACLES.includes(type)) {
+                    // Replace hard obstacle with medium or easy
+                    const safeTypes = ['SPIKE', 'DOUBLE_SPIKE', 'BLOCK'];
+                    type = safeTypes[Math.floor(Math.random() * safeTypes.length)];
+                } else if (MEDIUM_OBSTACLES.includes(type)) {
+                    // Replace medium with easy
+                    type = Math.random() > 0.5 ? 'SPIKE' : 'BLOCK';
+                }
+            }
 
             obstacles.push(new Obstacle(type, canvas.width + 100));
         }
@@ -475,15 +645,19 @@ function spawnObstacle() {
 function spawnPowerUp(x, y) {
     const rand = Math.random();
     let type = 'COIN';
-    if (rand > 0.95) type = 'BOMB'; // 5% chance for bomb (was jump pad)
-    else if (rand > 0.9) type = 'BOOST';
-    else if (rand > 0.8) type = 'HEART';
+    if (rand > 0.97) type = 'GHOST'; // 3% chance for ghost
+    else if (rand > 0.94) type = 'BULLDOZER'; // 3% chance for bulldozer
+    else if (rand > 0.91) type = 'BOMB'; // 3% chance for bomb
+    else if (rand > 0.86) type = 'BOOST'; // 5% chance for boost
+    else if (rand > 0.76) type = 'HEART'; // 10% chance for heart
 
     // Default spawn heights if not specified
     if (y === undefined) {
         y = canvas.height - GROUND_HEIGHT - 150;
         if (type === 'COIN') y = canvas.height - GROUND_HEIGHT - 50 - Math.random() * 100;
         if (type === 'BOMB') y = canvas.height - GROUND_HEIGHT - 30;
+        if (type === 'BULLDOZER') y = canvas.height - GROUND_HEIGHT - 30;
+        if (type === 'GHOST') y = canvas.height - GROUND_HEIGHT - 80;
     }
 
     powerUps.push(new PowerUp(type, x, y));
@@ -493,16 +667,20 @@ function spawnPowerUp(x, y) {
 function spawnPowerUpSafely(x) {
     const rand = Math.random();
     let type = 'COIN';
-    if (rand > 0.95) type = 'BOMB';
-    else if (rand > 0.9) type = 'BOOST';
-    else if (rand > 0.8) type = 'HEART';
+    if (rand > 0.97) type = 'GHOST';
+    else if (rand > 0.94) type = 'BULLDOZER';
+    else if (rand > 0.91) type = 'BOMB';
+    else if (rand > 0.86) type = 'BOOST';
+    else if (rand > 0.76) type = 'HEART';
 
     // Calculate safe Y position
     let y;
     const groundY = canvas.height - GROUND_HEIGHT;
     
-    if (type === 'BOMB') {
+    if (type === 'BOMB' || type === 'BULLDOZER') {
         y = groundY - 30;
+    } else if (type === 'GHOST') {
+        y = groundY - 80;
     } else if (type === 'COIN') {
         // Coins can be at various heights - find safe spot
         const possibleHeights = [groundY - 60, groundY - 100, groundY - 140, groundY - 180];
@@ -541,6 +719,8 @@ class Player {
         this.rotation = 0;
         this.color = playerColor;
         this.canDoubleJump = true; // Double jump available
+        this.usedDoubleJump = false; // Track if double jump was used (for faster fall)
+        this.flashTimer = 0; // For damage flash effect
     }
 
     jump() {
@@ -549,6 +729,7 @@ class Player {
             this.dy = JUMP_FORCE;
             this.isGrounded = false;
             this.canDoubleJump = true; // Reset double jump when jumping from ground
+            this.usedDoubleJump = false; // Reset double jump usage
             createParticles(this.x + this.size / 2, this.y + this.size, 5, '#fff');
             soundManager.ensurePlaying(); // Ensure music starts on first interaction
             soundManager.playJump();
@@ -556,6 +737,7 @@ class Player {
             // Double jump in mid-air!
             this.dy = JUMP_FORCE * 0.85; // Slightly weaker second jump
             this.canDoubleJump = false;
+            this.usedDoubleJump = true; // Mark that double jump was used
             // Special double jump particles
             createParticles(this.x + this.size / 2, this.y + this.size, 8, '#00f3ff');
             createParticles(this.x + this.size / 2, this.y + this.size, 5, '#ff00ff');
@@ -564,6 +746,11 @@ class Player {
     }
 
     update(dt = 1) {
+        // Update flash timer
+        if (this.flashTimer > 0) {
+            this.flashTimer -= dt * 0.016; // Decrement based on delta time (assuming 60fps base)
+        }
+        
         if (isBoosting) {
             // Fly even higher!
             const targetY = canvas.height - GROUND_HEIGHT - 350;
@@ -627,7 +814,13 @@ class Player {
             return;
         }
 
-        this.dy += GRAVITY * slowMotionFactor * dt;
+        // Apply gravity - faster fall after double jump
+        let gravityMultiplier = 1;
+        if (this.usedDoubleJump && this.dy > 0) {
+            // Falling after double jump - 35% faster gravity
+            gravityMultiplier = 1.35;
+        }
+        this.dy += GRAVITY * gravityMultiplier * slowMotionFactor * dt;
         this.y += this.dy * slowMotionFactor * dt;
 
         if (!this.isGrounded) {
@@ -642,6 +835,7 @@ class Player {
             this.dy = 0;
             this.isGrounded = true;
             this.canDoubleJump = true; // Reset double jump on landing
+            this.usedDoubleJump = false; // Reset double jump gravity
         }
     }
 
@@ -650,10 +844,33 @@ class Player {
         ctx.translate(this.x + this.size / 2, this.y + this.size / 2);
         ctx.rotate((this.rotation * Math.PI) / 180);
 
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = this.color;
+        // Ghost mode - make player semi-transparent
+        if (isGhosting) {
+            ctx.globalAlpha = 0.4 + Math.sin(Date.now() * 0.015) * 0.15;
+            ctx.shadowBlur = 25;
+            ctx.shadowColor = '#88ddff';
+        } else {
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = this.color;
+        }
 
-        drawShape(ctx, playerShape, this.size, this.color);
+        // Flash effect when damaged - rapid blinking
+        if (this.flashTimer > 0) {
+            // Blink rapidly: visible every other frame (using sin for smooth rapid flashing)
+            const flashPhase = Math.sin(this.flashTimer * 30);
+            if (flashPhase > 0) {
+                // Flash white/bright
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = '#ffffff';
+                drawShape(ctx, playerShape, this.size, '#ffffff');
+            } else {
+                // Normal color but slightly transparent
+                ctx.globalAlpha = 0.5;
+                drawShape(ctx, playerShape, this.size, this.color);
+            }
+        } else {
+            drawShape(ctx, playerShape, this.size, this.color);
+        }
 
         ctx.restore();
 
@@ -673,6 +890,91 @@ class Player {
             ctx.fill();
             ctx.restore();
         }
+        
+        // Draw Bulldozer effect
+        if (isBulldozing) {
+            ctx.save();
+            ctx.translate(this.x + this.size / 2, this.y + this.size / 2);
+            
+            // Pulsing orange aura
+            const pulse = Math.sin(Date.now() * 0.01) * 0.3 + 0.7;
+            ctx.shadowBlur = 30 * pulse;
+            ctx.shadowColor = '#ff6600';
+            
+            // Outer glow ring
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size * 0.9 + 5, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255, 102, 0, ${0.5 * pulse})`;
+            ctx.lineWidth = 5;
+            ctx.stroke();
+            
+            // Inner glow
+            ctx.globalAlpha = 0.3 * pulse;
+            ctx.fillStyle = '#ff8800';
+            ctx.fill();
+            
+            // Plow blade effect (front of player)
+            ctx.globalAlpha = 0.8;
+            ctx.fillStyle = '#ffaa00';
+            ctx.beginPath();
+            ctx.moveTo(this.size / 2 + 5, -this.size / 2 - 5);
+            ctx.lineTo(this.size / 2 + 15, -this.size / 2 + 5);
+            ctx.lineTo(this.size / 2 + 15, this.size / 2 - 5);
+            ctx.lineTo(this.size / 2 + 5, this.size / 2 + 5);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.restore();
+        }
+        
+        // Draw Ghost effect
+        if (isGhosting) {
+            ctx.save();
+            ctx.translate(this.x + this.size / 2, this.y + this.size / 2);
+            
+            // Ethereal pulsing glow
+            const ghostPulse = Math.sin(Date.now() * 0.008) * 0.3 + 0.7;
+            ctx.shadowBlur = 25 * ghostPulse;
+            ctx.shadowColor = '#88ddff';
+            
+            // Outer ethereal ring
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size * 0.9 + 8, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(136, 221, 255, ${0.4 * ghostPulse})`;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Second ring (phasing effect)
+            const phase = Math.sin(Date.now() * 0.012) * 5;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size * 0.7 + phase, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(170, 238, 255, ${0.3 * ghostPulse})`;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Inner ethereal glow
+            ctx.globalAlpha = 0.15 * ghostPulse;
+            ctx.fillStyle = '#aaeeff';
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size * 0.9, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+        }
+    }
+    
+    // Get player opacity for ghost effect
+    getOpacity() {
+        if (isGhosting) {
+            // Flicker between semi-transparent states
+            return 0.3 + Math.sin(Date.now() * 0.015) * 0.15;
+        }
+        return 1;
+    }
+    
+    // Trigger damage flash
+    triggerFlash() {
+        this.flashTimer = 0.5; // Flash for 0.5 seconds
     }
 }
 
@@ -1000,6 +1302,97 @@ class PowerUp {
             ctx.beginPath();
             ctx.arc(4, -this.size / 2 - 10, sparkSize * 0.5, 0, Math.PI * 2);
             ctx.fill();
+        } else if (this.type === 'BULLDOZER') {
+            // Draw bulldozer powerup - tank/plow shape
+            const pulse = Math.sin(this.fuseTimer * 4) * 0.2 + 1;
+            
+            ctx.shadowColor = '#ff8800';
+            ctx.shadowBlur = 15 * pulse;
+            
+            // Main body (orange rectangle)
+            ctx.fillStyle = '#ff6600';
+            ctx.fillRect(-12, -6, 24, 16);
+            
+            // Plow blade (front)
+            ctx.fillStyle = '#ffaa00';
+            ctx.beginPath();
+            ctx.moveTo(14, -10);
+            ctx.lineTo(18, -10);
+            ctx.lineTo(20, 12);
+            ctx.lineTo(14, 12);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Tracks
+            ctx.fillStyle = '#333';
+            ctx.fillRect(-14, 8, 28, 5);
+            
+            // Cabin
+            ctx.fillStyle = '#cc5500';
+            ctx.fillRect(-8, -12, 12, 8);
+            
+            // Window
+            ctx.fillStyle = '#88ccff';
+            ctx.fillRect(-6, -10, 8, 5);
+            
+            // Exhaust smoke particle effect
+            if (Math.random() < 0.3) {
+                ctx.fillStyle = 'rgba(100, 100, 100, 0.5)';
+                ctx.beginPath();
+                ctx.arc(-10 + Math.random() * 4, -14 - Math.random() * 6, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else if (this.type === 'GHOST') {
+            // Draw ghost powerup - spooky ghost shape
+            const float = Math.sin(this.fuseTimer * 3) * 3;
+            const pulse = Math.sin(this.fuseTimer * 5) * 0.2 + 0.8;
+            
+            ctx.translate(0, float);
+            
+            ctx.shadowColor = '#88ddff';
+            ctx.shadowBlur = 20 * pulse;
+            
+            // Ghost body (semi-transparent)
+            ctx.globalAlpha = 0.7 + Math.sin(this.fuseTimer * 4) * 0.2;
+            ctx.fillStyle = '#aaeeff';
+            
+            // Main body
+            ctx.beginPath();
+            ctx.arc(0, -5, 12, Math.PI, 0, false);
+            ctx.lineTo(12, 8);
+            // Wavy bottom
+            ctx.quadraticCurveTo(8, 5, 4, 10);
+            ctx.quadraticCurveTo(0, 5, -4, 10);
+            ctx.quadraticCurveTo(-8, 5, -12, 8);
+            ctx.lineTo(-12, -5);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Eyes
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.ellipse(-4, -4, 3, 4, 0, 0, Math.PI * 2);
+            ctx.ellipse(4, -4, 3, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Eye highlights
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(-5, -5, 1.5, 0, Math.PI * 2);
+            ctx.arc(3, -5, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Spooky glow particles
+            if (Math.random() < 0.4) {
+                ctx.globalAlpha = 0.5;
+                ctx.fillStyle = '#aaeeff';
+                const px = (Math.random() - 0.5) * 30;
+                const py = (Math.random() - 0.5) * 30;
+                ctx.beginPath();
+                ctx.arc(px, py, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
         ctx.restore();
@@ -1136,10 +1529,17 @@ function init() {
     timeSurvived = 0;
     coinsCollectedThisRun = 0; // Reset coins for this run
 
-    const levelConfig = LEVELS[currentLevel] || LEVELS[1];
-    gameSpeed = levelConfig.startSpeed;
-    smoothGameSpeed = levelConfig.startSpeed;
-    targetGameSpeed = levelConfig.startSpeed;
+    // Set starting speed based on mode
+    let startSpeed;
+    if (isUnlimitedMode) {
+        startSpeed = UNLIMITED_MODE.startSpeed;
+    } else {
+        const levelConfig = LEVELS[currentLevel] || LEVELS[1];
+        startSpeed = levelConfig.startSpeed;
+    }
+    gameSpeed = startSpeed;
+    smoothGameSpeed = startSpeed;
+    targetGameSpeed = startSpeed;
     lastTime = 0; // Reset delta time tracking
 
     slowMotionFactor = 1;
@@ -1148,28 +1548,21 @@ function init() {
     shieldCount = 0;
     isBoosting = false;
     boostTimer = 0;
+    isBulldozing = false;
+    bulldozerTimer = 0;
+    isGhosting = false;
+    ghostTimer = 0;
     safeModeTimer = 0;
+    canvas.style.transform = ''; // Reset any screen shake
 
     document.getElementById('score').innerText = score;
-    document.getElementById('current-level-num').innerText = currentLevel;
+    document.getElementById('current-level-num').innerText = isHardcoreMode ? '💀' : (isUnlimitedMode ? '∞' : currentLevel);
     document.getElementById('game-canvas').classList.remove('wasted-effect');
     document.getElementById('wasted-screen').classList.remove('active');
     updateShieldUI();
 
-    const saved = localStorage.getItem('neonDashProgress');
-    if (saved) {
-        unlockedLevels = parseInt(saved);
-    }
-
-    // Load saved customization
-    const savedColor = localStorage.getItem('neonDashColor');
-    if (savedColor) {
-        playerColor = savedColor;
-    }
-    const savedShape = localStorage.getItem('neonDashShape');
-    if (savedShape) {
-        playerShape = savedShape;
-    }
+    // Note: Don't load progress here - loadProgress() handles it on page load
+    // Loading here would overwrite progress saved during the current session
 }
 
 
@@ -1347,6 +1740,22 @@ function checkCollisions() {
                 saveProgress(); // Save immediately
                 updateUI();
                 soundManager.playCoin();
+            } else if (p.type === 'BULLDOZER') {
+                // Activate bulldozer mode!
+                isBulldozing = true;
+                bulldozerTimer = 240; // 4 seconds at 60fps
+                createParticles(player.x, player.y, 15, '#ff6600');
+                createParticles(player.x, player.y, 10, '#ffaa00');
+                soundManager.playBulldozer();
+                soundManager.playPowerup();
+            } else if (p.type === 'GHOST') {
+                // Activate ghost mode!
+                isGhosting = true;
+                ghostTimer = 300; // 5 seconds at 60fps
+                createParticles(player.x, player.y, 20, '#88ddff');
+                createParticles(player.x, player.y, 15, '#aaeeff');
+                soundManager.playGhost();
+                soundManager.playPowerup();
             } else if (p.type === 'BOMB') {
                 // BOOM! Launch player high into air
                 player.dy = -50;
@@ -1376,6 +1785,33 @@ function checkCollisions() {
     }
 
     if (isBoosting) return; // Invincible while boosting
+    if (isGhosting) return; // Phase through obstacles while ghosting
+    
+    // Bulldozer mode - plow through obstacles!
+    if (isBulldozing) {
+        for (let obs of obstacles) {
+            // Check if obstacle is close to player
+            if (obs.x < player.x + player.size + 20 && obs.x + obs.w > player.x - 10) {
+                // Destroy obstacle on contact
+                if (!obs.markedForDeletion) {
+                    obs.markedForDeletion = true;
+                    // Debris particles flying off
+                    for (let i = 0; i < 8; i++) {
+                        const p = new Particle(obs.x + obs.w/2, obs.y + obs.h/2, '#ff6600');
+                        p.speedX = 5 + Math.random() * 10;
+                        p.speedY = (Math.random() - 0.5) * 15;
+                        p.size = 4 + Math.random() * 6;
+                        particles.push(p);
+                    }
+                    // Play rumble sound occasionally
+                    if (Math.random() < 0.3) {
+                        soundManager.playBulldozer();
+                    }
+                }
+            }
+        }
+        return; // Invincible while bulldozing
+    }
 
     for (let obs of obstacles) {
         // Skip laser if it's off
@@ -1439,6 +1875,7 @@ function checkCollisions() {
                     player.dy = 0;
                     player.isGrounded = true;
                     player.canDoubleJump = true; // Reset double jump on landing
+                    player.usedDoubleJump = false; // Reset double jump gravity
                     // Snap rotation
                     const snap = Math.round(player.rotation / 90) * 90;
                     player.rotation = snap;
@@ -1452,8 +1889,8 @@ function checkCollisions() {
                 updateShieldUI();
                 obs.markedForDeletion = true; // Destroy obstacle
                 createParticles(obs.x, obs.y, 10, '#fff');
-                slowMotionFactor = 0.5; // Brief slowmo impact
-                setTimeout(() => slowMotionFactor = 1, 500);
+                createParticles(player.x + player.size/2, player.y + player.size/2, 8, '#ff0055'); // Red particles from player
+                player.triggerFlash(); // Flash effect instead of slowdown
             } else {
                 if (landingGracePeriod > 0) {
                     // Safe landing logic
@@ -1573,11 +2010,13 @@ function levelComplete() {
     }
 
     // Unlock next level IMMEDIATELY when crossing finish line
-    if (currentLevel < 10 && currentLevel >= unlockedLevels) {
-        unlockedLevels = currentLevel + 1;
-        document.getElementById('level-complete-message').innerText = `Level ${unlockedLevels} Unlocked!`;
-    } else if (currentLevel === 10) {
-        document.getElementById('level-complete-message').innerText = 'All Levels Complete!';
+    const nextLevel = currentLevel + 1;
+    if (nextLevel <= 20 && nextLevel > unlockedLevels) {
+        unlockedLevels = nextLevel;
+        console.log(`Level ${nextLevel} unlocked! unlockedLevels is now: ${unlockedLevels}`);
+        document.getElementById('level-complete-message').innerText = `Level ${nextLevel} Unlocked!`;
+    } else if (currentLevel === 20) {
+        document.getElementById('level-complete-message').innerText = '🎉 All Quest Levels Complete! 🎉';
     } else {
         document.getElementById('level-complete-message').innerText = 'Level Complete!';
     }
@@ -1585,6 +2024,10 @@ function levelComplete() {
     // Save progress RIGHT AWAY so it persists
     saveProgress();
     updateUI();
+    updateLevelButtons(); // Update the level select UI immediately
+    
+    // Also update level buttons immediately
+    updateLevelButtons();
 
     createParticles(player.x + player.size / 2, player.y + player.size / 2, 100, '#00ff00');
     document.getElementById('current-level-display').classList.remove('visible');
@@ -1602,11 +2045,18 @@ function update(dt = 1) {
     player.update(dt);
 
     // Speed Progression - Calculate target speed
-    const levelConfig = LEVELS[currentLevel];
-    const progress = Math.min(distanceTraveled / levelConfig.length, 1);
-    // Use easeOutQuad for smoother speed curve
-    const easedProgress = 1 - (1 - progress) * (1 - progress);
-    targetGameSpeed = levelConfig.startSpeed + (levelConfig.maxSpeed - levelConfig.startSpeed) * easedProgress;
+    if (isUnlimitedMode) {
+        // Unlimited mode - gradual speed increase over time
+        const unlimitedProgress = Math.min(distanceTraveled / 100000, 1);
+        const easedProgress = 1 - (1 - unlimitedProgress) * (1 - unlimitedProgress);
+        targetGameSpeed = UNLIMITED_MODE.startSpeed + (UNLIMITED_MODE.maxSpeed - UNLIMITED_MODE.startSpeed) * easedProgress;
+    } else {
+        const levelConfig = LEVELS[currentLevel];
+        const progress = Math.min(distanceTraveled / levelConfig.length, 1);
+        // Use easeOutQuad for smoother speed curve
+        const easedProgress = 1 - (1 - progress) * (1 - progress);
+        targetGameSpeed = levelConfig.startSpeed + (levelConfig.maxSpeed - levelConfig.startSpeed) * easedProgress;
+    }
     
     // Smoothly interpolate to target speed (prevents jerky speed changes)
     smoothGameSpeed += (targetGameSpeed - smoothGameSpeed) * SPEED_LERP_FACTOR * dt;
@@ -1630,6 +2080,93 @@ function update(dt = 1) {
                     obs.markedForDeletion = true;
                 }
             });
+        }
+    }
+    
+    // Bulldozer mode timer and effects
+    if (isBulldozing) {
+        bulldozerTimer -= dt;
+        
+        // Spawn dust/debris particles while bulldozing
+        if (Math.random() < 0.4 * dt) {
+            const p = new Particle(
+                player.x - 10,
+                player.y + player.size,
+                '#8B4513'
+            );
+            p.speedX = -3 - Math.random() * 5;
+            p.speedY = -1 - Math.random() * 3;
+            p.size = 4 + Math.random() * 4;
+            particles.push(p);
+        }
+        
+        // Screen shake effect (subtle)
+        if (Math.random() < 0.1 * dt) {
+            canvas.style.transform = `translate(${(Math.random() - 0.5) * 4}px, ${(Math.random() - 0.5) * 2}px)`;
+        } else {
+            canvas.style.transform = '';
+        }
+        
+        if (bulldozerTimer <= 0) {
+            isBulldozing = false;
+            canvas.style.transform = ''; // Reset any screen shake
+            
+            // Final clear - destroy all obstacles on screen with explosion effect
+            obstacles.forEach(obs => {
+                if (obs.x < canvas.width && obs.x > -50) {
+                    createParticles(obs.x + obs.w / 2, obs.y + obs.h / 2, 8, '#ff6600');
+                    createParticles(obs.x + obs.w / 2, obs.y + obs.h / 2, 5, '#ffaa00');
+                    obs.markedForDeletion = true;
+                }
+            });
+            soundManager.playBomb(); // Big explosion sound at end
+        }
+    }
+    
+    // Ghost mode timer and effects
+    if (isGhosting) {
+        ghostTimer -= dt;
+        
+        // Spawn ethereal particles while ghosting
+        if (Math.random() < 0.5 * dt) {
+            const p = new Particle(
+                player.x + Math.random() * player.size,
+                player.y + Math.random() * player.size,
+                '#88ddff'
+            );
+            p.speedX = (Math.random() - 0.5) * 3;
+            p.speedY = -2 - Math.random() * 2;
+            p.size = 3 + Math.random() * 4;
+            p.life = 0.6;
+            particles.push(p);
+        }
+        
+        // Occasional wisp particles trailing behind
+        if (Math.random() < 0.3 * dt) {
+            const p = new Particle(
+                player.x - 5 - Math.random() * 10,
+                player.y + player.size / 2,
+                '#aaeeff'
+            );
+            p.speedX = -2 - Math.random() * 3;
+            p.speedY = (Math.random() - 0.5) * 2;
+            p.size = 5 + Math.random() * 5;
+            p.life = 0.4;
+            particles.push(p);
+        }
+        
+        if (ghostTimer <= 0) {
+            isGhosting = false;
+            
+            // Final clear - all obstacles fade away with ethereal effect
+            obstacles.forEach(obs => {
+                if (obs.x < canvas.width && obs.x > -50) {
+                    createParticles(obs.x + obs.w / 2, obs.y + obs.h / 2, 10, '#88ddff');
+                    createParticles(obs.x + obs.w / 2, obs.y + obs.h / 2, 6, '#aaeeff');
+                    obs.markedForDeletion = true;
+                }
+            });
+            soundManager.playGhost(); // Ethereal sound at end
         }
     }
     if (safeModeTimer > 0) safeModeTimer -= dt;
@@ -2870,6 +3407,11 @@ function draw() {
     powerUps.forEach(p => p.draw());
     particles.forEach(p => p.draw());
     cubeFragments.forEach(f => f.draw());
+    
+    // Draw progress bar (only in quest levels, not unlimited)
+    if (showProgressBar && gameState === 'PLAYING' && !isUnlimitedMode) {
+        drawProgressBar();
+    }
 }
 
 // Draw hearts below the player
@@ -2895,6 +3437,99 @@ function drawPlayerHearts() {
         const x = startX + i * spacing;
         ctx.fillText('❤️', x, y);
     }
+    
+    ctx.restore();
+}
+
+// Draw stylish progress bar
+function drawProgressBar() {
+    const levelConfig = LEVELS[currentLevel];
+    if (!levelConfig) return;
+    
+    const progress = Math.min(distanceTraveled / levelConfig.length, 1);
+    const percentage = Math.floor(progress * 100);
+    
+    // Bar dimensions
+    const barWidth = 400;
+    const barHeight = 28;
+    const barX = (canvas.width - barWidth) / 2;
+    const barY = 55;
+    const borderRadius = 14;
+    const filledWidth = barWidth * progress;
+    
+    ctx.save();
+    
+    // Background (dark with border)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.strokeStyle = 'rgba(0, 243, 255, 0.5)';
+    ctx.lineWidth = 2;
+    
+    // Draw rounded rectangle background
+    ctx.beginPath();
+    ctx.roundRect(barX, barY, barWidth, barHeight, borderRadius);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Clip for the filled portion
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(barX + 2, barY + 2, filledWidth - 4, barHeight - 4, borderRadius - 2);
+    ctx.clip();
+    
+    // Gradient fill
+    const gradient = ctx.createLinearGradient(barX, barY, barX + barWidth, barY);
+    gradient.addColorStop(0, '#00f3ff');
+    gradient.addColorStop(0.5, '#00ffaa');
+    gradient.addColorStop(1, '#00ff55');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(barX, barY, filledWidth, barHeight);
+    
+    // Animated diagonal stripes
+    const stripeWidth = 20;
+    const stripeOffset = (Date.now() * 0.05) % (stripeWidth * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+    
+    for (let i = -stripeWidth * 2; i < barWidth + stripeWidth * 2; i += stripeWidth * 2) {
+        ctx.beginPath();
+        ctx.moveTo(barX + i + stripeOffset, barY);
+        ctx.lineTo(barX + i + stripeWidth + stripeOffset, barY);
+        ctx.lineTo(barX + i + stripeOffset, barY + barHeight);
+        ctx.lineTo(barX + i - stripeWidth + stripeOffset, barY + barHeight);
+        ctx.closePath();
+        ctx.fill();
+    }
+    
+    ctx.restore();
+    
+    // Glow effect on the filled portion
+    if (progress > 0) {
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#00f3ff';
+        ctx.strokeStyle = 'rgba(0, 243, 255, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(barX + 2, barY + 2, Math.max(0, filledWidth - 4), barHeight - 4, borderRadius - 2);
+        ctx.stroke();
+    }
+    
+    // Percentage text
+    ctx.shadowBlur = 5;
+    ctx.shadowColor = '#000';
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 16px "Orbitron", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${percentage}%`, barX + barWidth / 2, barY + barHeight / 2 + 1);
+    
+    // Finish line icon at the end
+    ctx.font = '20px Arial';
+    ctx.fillText('🏁', barX + barWidth + 25, barY + barHeight / 2);
+    
+    // Level indicator at the start
+    ctx.font = 'bold 14px "Orbitron", sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.fillText(`LV ${currentLevel}`, barX - 15, barY + barHeight / 2);
     
     ctx.restore();
 }
@@ -2933,7 +3568,6 @@ function loop(currentTime) {
 // Level selection UI
 function showLevelSelect() {
     gameState = 'LEVEL_SELECT';
-    document.getElementById('start-screen').classList.remove('active');
     document.getElementById('game-over-screen').classList.remove('active');
     document.getElementById('level-complete-screen').classList.remove('active');
     document.getElementById('level-select-screen').classList.add('active');
@@ -2947,7 +3581,16 @@ function showLevelSelect() {
 function updateLevelButtons() {
     const buttons = document.querySelectorAll('.level-btn');
     buttons.forEach(btn => {
-        const level = parseInt(btn.dataset.level);
+        const levelData = btn.dataset.level;
+        
+        // Unlimited and Hardcore modes are always unlocked
+        if (levelData === 'unlimited' || levelData === 'hardcore') {
+            btn.classList.remove('locked');
+            btn.classList.add('unlocked');
+            return;
+        }
+        
+        const level = parseInt(levelData);
         if (level <= unlockedLevels) {
             btn.classList.remove('locked');
             btn.classList.add('unlocked');
@@ -2959,7 +3602,21 @@ function updateLevelButtons() {
 }
 
 function startLevel(level) {
-    currentLevel = level;
+    // Check if starting unlimited or hardcore mode
+    if (level === 'unlimited') {
+        isUnlimitedMode = true;
+        isHardcoreMode = false;
+        currentLevel = 1; // Use level 1 config as base
+    } else if (level === 'hardcore') {
+        isUnlimitedMode = true; // Hardcore is a variant of unlimited
+        isHardcoreMode = true;
+        currentLevel = 1;
+    } else {
+        isUnlimitedMode = false;
+        isHardcoreMode = false;
+        currentLevel = level;
+    }
+    
     init();
     gameState = 'PLAYING';
     gameStartTime = Date.now(); // Start timer
@@ -2967,15 +3624,26 @@ function startLevel(level) {
     document.getElementById('level-select-screen').classList.remove('active');
     document.querySelector('.game-title').style.opacity = '0.2';
     document.getElementById('current-level-display').classList.add('visible');
+    
+    // Update level display for unlimited/hardcore mode
+    if (isHardcoreMode) {
+        document.getElementById('current-level-num').innerText = '💀';
+    } else if (isUnlimitedMode) {
+        document.getElementById('current-level-num').innerText = '∞';
+    }
 
     // Reset powerups
     powerUps = [];
     shieldCount = 0;
     isBoosting = false;
     boostTimer = 0;
-    boostTimer = 0;
+    isBulldozing = false;
+    bulldozerTimer = 0;
+    isGhosting = false;
+    ghostTimer = 0;
     safeModeTimer = 0;
     landingGracePeriod = 0;
+    canvas.style.transform = ''; // Reset any screen shake
     updateShieldUI();
 
     soundManager.unpause(); // Resume music when starting level
@@ -2987,7 +3655,21 @@ window.addEventListener('resize', resize);
 
 document.querySelectorAll('.level-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-        const level = parseInt(btn.dataset.level);
+        const levelData = btn.dataset.level;
+        
+        // Handle unlimited mode (always unlocked)
+        if (levelData === 'unlimited') {
+            startLevel('unlimited');
+            return;
+        }
+        
+        // Handle hardcore mode (always unlocked)
+        if (levelData === 'hardcore') {
+            startLevel('hardcore');
+            return;
+        }
+        
+        const level = parseInt(levelData);
         if (level <= unlockedLevels) {
             startLevel(level);
         }
@@ -3016,9 +3698,7 @@ window.addEventListener('keydown', (e) => {
     }
 
     if (e.code === jumpKey) {
-        if (gameState === 'START') {
-            showLevelSelect();
-        } else if (gameState === 'PLAYING') {
+        if (gameState === 'PLAYING') {
             player.jump();
         } else if (gameState === 'GAMEOVER') {
             if (!canRestart) return; // Prevent restart during wasted animation
@@ -3029,9 +3709,10 @@ window.addEventListener('keydown', (e) => {
             document.getElementById('wasted-screen').classList.remove('active');
             document.querySelector('.game-title').style.opacity = '0.2';
             document.getElementById('current-level-display').classList.add('visible');
+            document.getElementById('current-level-num').innerText = isHardcoreMode ? '💀' : (isUnlimitedMode ? '∞' : currentLevel);
             soundManager.unpause();
         } else if (gameState === 'WIN') {
-            if (currentLevel < 10) {
+            if (!isUnlimitedMode && currentLevel < 20) {
                 currentLevel++;
                 startLevel(currentLevel);
             } else {
@@ -3040,11 +3721,7 @@ window.addEventListener('keydown', (e) => {
             document.getElementById('level-complete-screen').classList.remove('active');
         }
     } else if (e.code === 'Escape') {
-        if (gameState === 'LEVEL_SELECT') {
-            gameState = 'START';
-            document.getElementById('level-select-screen').classList.remove('active');
-            document.getElementById('start-screen').classList.add('active');
-        } else if (gameState === 'GAMEOVER' || gameState === 'WIN') {
+        if (gameState === 'GAMEOVER' || gameState === 'WIN') {
             showLevelSelect();
             document.getElementById('game-over-screen').classList.remove('active');
             document.getElementById('wasted-screen').classList.remove('active');
@@ -3065,9 +3742,7 @@ window.addEventListener('mousedown', (e) => {
     // Also check if we are in a modal state where clicks shouldn't start the game
     if (gameState === 'SETTINGS' || gameState === 'CUSTOMIZE' || gameState === 'LEVEL_SELECT') return;
 
-    if (gameState === 'START') {
-        showLevelSelect();
-    } else if (gameState === 'PLAYING') {
+    if (gameState === 'PLAYING') {
         player.jump();
     } else if (gameState === 'GAMEOVER') {
         if (!canRestart) return; // Prevent restart during wasted animation
@@ -3078,9 +3753,10 @@ window.addEventListener('mousedown', (e) => {
         document.getElementById('wasted-screen').classList.remove('active');
         document.querySelector('.game-title').style.opacity = '0.2';
         document.getElementById('current-level-display').classList.add('visible');
+        document.getElementById('current-level-num').innerText = isHardcoreMode ? '💀' : (isUnlimitedMode ? '∞' : currentLevel);
         soundManager.unpause();
     } else if (gameState === 'WIN') {
-        if (currentLevel < 10) {
+        if (!isUnlimitedMode && currentLevel < 20) {
             currentLevel++;
             startLevel(currentLevel);
         } else {
@@ -3671,13 +4347,11 @@ function handleBackgroundClick(bg, price, isUnlocked) {
         setBackground(bg);
         renderShopUI();
     } else {
-        // Preview the background
+        // Select the background for purchase
         previewingBackground = bg;
         selectedItem = { type: 'background', value: bg, price: price };
         highlightSelected('background', bg);
         updateUnlockButton();
-        // Draw the preview background behind the game
-        drawBackgroundPreview(bg);
     }
 }
 
@@ -3716,6 +4390,7 @@ function clearSelection() {
 // Update unlock button visibility and text
 function updateUnlockButton() {
     const unlockBtn = document.getElementById('cust-unlock-btn');
+    const previewBtn = document.getElementById('cust-preview-btn');
     const priceSpan = document.getElementById('unlock-price');
     
     if (!unlockBtn) return;
@@ -3730,16 +4405,720 @@ function updateUnlockButton() {
         } else {
             unlockBtn.disabled = false;
         }
+        
+        // Show preview button only for backgrounds
+        if (previewBtn) {
+            if (selectedItem.type === 'background') {
+                previewBtn.style.display = 'flex';
+            } else {
+                previewBtn.style.display = 'none';
+            }
+        }
     } else {
         unlockBtn.style.display = 'none';
+        if (previewBtn) previewBtn.style.display = 'none';
     }
 }
 
-// Draw background preview on the canvas behind the customize screen
+// Draw background preview on the main canvas behind the customize screen
 function drawBackgroundPreview(bg) {
-    // This will update the background preview in the game canvas
-    // For now, we'll just show it when they go back to playing
-    // The preview panel shows the shape/color, game canvas shows the bg preview
+    // Draw the selected background on the main game canvas
+    // The customize screen is semi-transparent so this will show through
+    drawFullBackgroundPreview(bg);
+}
+
+// Render loop for customize screen background preview
+let customizeAnimFrame = null;
+function startCustomizeBackgroundPreview() {
+    function renderCustomizeBg() {
+        if (gameState !== 'CUSTOMIZE') {
+            customizeAnimFrame = null;
+            return;
+        }
+        
+        // Draw the preview background or current background
+        const bgToShow = previewingBackground || currentBackground;
+        drawFullBackgroundPreview(bgToShow);
+        
+        customizeAnimFrame = requestAnimationFrame(renderCustomizeBg);
+    }
+    
+    if (!customizeAnimFrame) {
+        renderCustomizeBg();
+    }
+}
+
+// Draw a background on the main game canvas
+function drawFullBackgroundPreview(bgName) {
+    ctx.save();
+    
+    switch(bgName) {
+        case 'space':
+            const spaceGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            spaceGrad.addColorStop(0, '#0a0a1a');
+            spaceGrad.addColorStop(0.5, '#1a1a3a');
+            spaceGrad.addColorStop(1, '#0a0a1a');
+            ctx.fillStyle = spaceGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Draw stars
+            ctx.fillStyle = '#ffffff';
+            for (let i = 0; i < 100; i++) {
+                const x = (i * 137.5) % canvas.width;
+                const y = (i * 73.3) % canvas.height;
+                const size = (i % 3) + 1;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            break;
+            
+        case 'aurora':
+            const auroraGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            auroraGrad.addColorStop(0, '#0a0a20');
+            auroraGrad.addColorStop(0.3, '#1a2a40');
+            auroraGrad.addColorStop(0.6, '#0a3030');
+            auroraGrad.addColorStop(1, '#0a0a15');
+            ctx.fillStyle = auroraGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Aurora waves
+            const time = Date.now() * 0.001;
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height * 0.3 + i * 40);
+                for (let x = 0; x < canvas.width; x += 20) {
+                    const y = canvas.height * 0.3 + i * 40 + Math.sin(x * 0.01 + time + i) * 30;
+                    ctx.lineTo(x, y);
+                }
+                ctx.strokeStyle = `rgba(0, ${150 + i * 50}, ${100 + i * 50}, 0.3)`;
+                ctx.lineWidth = 20;
+                ctx.stroke();
+            }
+            break;
+            
+        case 'sunset':
+            const sunsetGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            sunsetGrad.addColorStop(0, '#1a0a20');
+            sunsetGrad.addColorStop(0.3, '#4a1a3a');
+            sunsetGrad.addColorStop(0.5, '#8a3a2a');
+            sunsetGrad.addColorStop(0.7, '#ca6a1a');
+            sunsetGrad.addColorStop(1, '#2a1a1a');
+            ctx.fillStyle = sunsetGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Sun glow
+            const sunGrad = ctx.createRadialGradient(canvas.width * 0.7, canvas.height * 0.5, 0, canvas.width * 0.7, canvas.height * 0.5, 150);
+            sunGrad.addColorStop(0, 'rgba(255, 200, 100, 0.4)');
+            sunGrad.addColorStop(1, 'rgba(255, 100, 50, 0)');
+            ctx.fillStyle = sunGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            break;
+            
+        case 'midnight':
+            const midnightGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            midnightGrad.addColorStop(0, '#05050a');
+            midnightGrad.addColorStop(0.5, '#0a0a15');
+            midnightGrad.addColorStop(1, '#050508');
+            ctx.fillStyle = midnightGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Faint stars
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            for (let i = 0; i < 50; i++) {
+                const x = (i * 97.3) % canvas.width;
+                const y = (i * 61.7) % canvas.height;
+                ctx.beginPath();
+                ctx.arc(x, y, 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            break;
+            
+        case 'ocean':
+            const oceanGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            oceanGrad.addColorStop(0, '#0a1a2a');
+            oceanGrad.addColorStop(0.5, '#0a2a4a');
+            oceanGrad.addColorStop(1, '#051525');
+            ctx.fillStyle = oceanGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Waves
+            const waveTime = Date.now() * 0.002;
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height * 0.6 + i * 30);
+                for (let x = 0; x < canvas.width; x += 10) {
+                    const y = canvas.height * 0.6 + i * 30 + Math.sin(x * 0.02 + waveTime + i * 0.5) * 15;
+                    ctx.lineTo(x, y);
+                }
+                ctx.strokeStyle = `rgba(0, 150, 200, ${0.1 + i * 0.05})`;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+            break;
+            
+        case 'forest':
+            const forestGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            forestGrad.addColorStop(0, '#0a1a0a');
+            forestGrad.addColorStop(0.5, '#1a3a1a');
+            forestGrad.addColorStop(1, '#0a150a');
+            ctx.fillStyle = forestGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Tree silhouettes
+            ctx.fillStyle = 'rgba(0, 30, 0, 0.5)';
+            for (let i = 0; i < 8; i++) {
+                const x = (i * canvas.width / 8) + 50;
+                const h = 100 + (i % 3) * 50;
+                ctx.beginPath();
+                ctx.moveTo(x, canvas.height);
+                ctx.lineTo(x - 30, canvas.height - h);
+                ctx.lineTo(x + 30, canvas.height - h);
+                ctx.closePath();
+                ctx.fill();
+            }
+            break;
+            
+        case 'volcano':
+            const volcanoGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            volcanoGrad.addColorStop(0, '#1a0a0a');
+            volcanoGrad.addColorStop(0.5, '#3a1a0a');
+            volcanoGrad.addColorStop(1, '#0a0505');
+            ctx.fillStyle = volcanoGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Lava glow
+            const lavaGrad = ctx.createRadialGradient(canvas.width * 0.5, canvas.height, 0, canvas.width * 0.5, canvas.height, 200);
+            lavaGrad.addColorStop(0, 'rgba(255, 100, 0, 0.4)');
+            lavaGrad.addColorStop(1, 'rgba(100, 0, 0, 0)');
+            ctx.fillStyle = lavaGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            break;
+            
+        case 'arctic':
+            const arcticGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            arcticGrad.addColorStop(0, '#1a2a3a');
+            arcticGrad.addColorStop(0.5, '#2a4a5a');
+            arcticGrad.addColorStop(1, '#1a2a35');
+            ctx.fillStyle = arcticGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Snow particles
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            const snowTime = Date.now() * 0.001;
+            for (let i = 0; i < 30; i++) {
+                const x = ((i * 83.7) + snowTime * 20) % canvas.width;
+                const y = ((i * 47.3) + snowTime * 30) % canvas.height;
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            break;
+            
+        case 'desert':
+            const desertGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            desertGrad.addColorStop(0, '#2a2a1a');
+            desertGrad.addColorStop(0.4, '#4a3a2a');
+            desertGrad.addColorStop(1, '#1a1a0a');
+            ctx.fillStyle = desertGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Sand dunes
+            ctx.fillStyle = 'rgba(80, 60, 30, 0.3)';
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            for (let x = 0; x < canvas.width; x += 50) {
+                const y = canvas.height - 100 + Math.sin(x * 0.01) * 50;
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+            break;
+            
+        case 'nebula':
+            const nebulaGrad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            nebulaGrad.addColorStop(0, '#1a0a2a');
+            nebulaGrad.addColorStop(0.5, '#2a1a4a');
+            nebulaGrad.addColorStop(1, '#0a1a3a');
+            ctx.fillStyle = nebulaGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Nebula clouds
+            for (let i = 0; i < 5; i++) {
+                const cloudGrad = ctx.createRadialGradient(
+                    (i * 200) % canvas.width, (i * 150) % canvas.height, 0,
+                    (i * 200) % canvas.width, (i * 150) % canvas.height, 100
+                );
+                cloudGrad.addColorStop(0, `rgba(${100 + i * 30}, 50, ${150 + i * 20}, 0.2)`);
+                cloudGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = cloudGrad;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            break;
+            
+        case 'storm':
+            const stormGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            stormGrad.addColorStop(0, '#1a1a2a');
+            stormGrad.addColorStop(0.5, '#2a2a3a');
+            stormGrad.addColorStop(1, '#0a0a15');
+            ctx.fillStyle = stormGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Rain
+            ctx.strokeStyle = 'rgba(150, 150, 200, 0.3)';
+            ctx.lineWidth = 1;
+            const rainTime = Date.now() * 0.01;
+            for (let i = 0; i < 50; i++) {
+                const x = (i * 47) % canvas.width;
+                const y = ((i * 31) + rainTime * 5) % canvas.height;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x - 5, y + 20);
+                ctx.stroke();
+            }
+            break;
+            
+        case 'crystal':
+            const crystalGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            crystalGrad.addColorStop(0, '#1a1a2a');
+            crystalGrad.addColorStop(0.5, '#2a3a4a');
+            crystalGrad.addColorStop(1, '#1a2a3a');
+            ctx.fillStyle = crystalGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Crystal formations
+            ctx.strokeStyle = 'rgba(150, 200, 255, 0.2)';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 10; i++) {
+                const x = (i * canvas.width / 10) + 30;
+                ctx.beginPath();
+                ctx.moveTo(x, canvas.height);
+                ctx.lineTo(x + 20, canvas.height - 80 - (i % 3) * 30);
+                ctx.lineTo(x + 40, canvas.height);
+                ctx.stroke();
+            }
+            break;
+            
+        case 'sakura':
+            const sakuraGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            sakuraGrad.addColorStop(0, '#2a1a2a');
+            sakuraGrad.addColorStop(0.5, '#3a2a3a');
+            sakuraGrad.addColorStop(1, '#1a1520');
+            ctx.fillStyle = sakuraGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Cherry blossom petals
+            ctx.fillStyle = 'rgba(255, 180, 200, 0.4)';
+            const petalTime = Date.now() * 0.001;
+            for (let i = 0; i < 20; i++) {
+                const x = ((i * 67) + petalTime * 30) % canvas.width;
+                const y = ((i * 43) + petalTime * 20) % canvas.height;
+                ctx.beginPath();
+                ctx.ellipse(x, y, 5, 3, (i * 0.5), 0, Math.PI * 2);
+                ctx.fill();
+            }
+            break;
+            
+        case 'cave':
+            const caveGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            caveGrad.addColorStop(0, '#0a0a0a');
+            caveGrad.addColorStop(0.5, '#151515');
+            caveGrad.addColorStop(1, '#050505');
+            ctx.fillStyle = caveGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Stalactites
+            ctx.fillStyle = 'rgba(50, 50, 60, 0.5)';
+            for (let i = 0; i < 12; i++) {
+                const x = (i * canvas.width / 12) + 20;
+                const h = 40 + (i % 4) * 20;
+                ctx.beginPath();
+                ctx.moveTo(x - 10, 0);
+                ctx.lineTo(x, h);
+                ctx.lineTo(x + 10, 0);
+                ctx.closePath();
+                ctx.fill();
+            }
+            break;
+            
+        case 'neon_city':
+            const neonGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            neonGrad.addColorStop(0, '#0a0a1a');
+            neonGrad.addColorStop(1, '#1a0a2a');
+            ctx.fillStyle = neonGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // City silhouette
+            ctx.fillStyle = 'rgba(20, 20, 40, 0.8)';
+            for (let i = 0; i < 10; i++) {
+                const x = i * (canvas.width / 10);
+                const h = 80 + (i % 4) * 40;
+                ctx.fillRect(x, canvas.height - h, canvas.width / 12, h);
+            }
+            // Neon lights
+            ctx.fillStyle = 'rgba(255, 0, 100, 0.5)';
+            ctx.fillRect(100, canvas.height - 150, 3, 20);
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.5)';
+            ctx.fillRect(300, canvas.height - 120, 3, 15);
+            break;
+            
+        case 'galaxy':
+            const galaxyGrad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, canvas.width * 0.6);
+            galaxyGrad.addColorStop(0, '#2a1a3a');
+            galaxyGrad.addColorStop(0.5, '#1a1a2a');
+            galaxyGrad.addColorStop(1, '#0a0a15');
+            ctx.fillStyle = galaxyGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Spiral galaxy hint
+            ctx.strokeStyle = 'rgba(200, 150, 255, 0.1)';
+            ctx.lineWidth = 30;
+            const galaxyTime = Date.now() * 0.0001;
+            ctx.beginPath();
+            for (let a = 0; a < Math.PI * 4; a += 0.1) {
+                const r = a * 30;
+                const x = canvas.width/2 + Math.cos(a + galaxyTime) * r;
+                const y = canvas.height/2 + Math.sin(a + galaxyTime) * r * 0.5;
+                if (a === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            break;
+            
+        case 'underwater':
+            const underwaterGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            underwaterGrad.addColorStop(0, '#0a2a3a');
+            underwaterGrad.addColorStop(0.5, '#0a3a4a');
+            underwaterGrad.addColorStop(1, '#051a25');
+            ctx.fillStyle = underwaterGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Bubbles
+            ctx.fillStyle = 'rgba(150, 200, 255, 0.3)';
+            const bubbleTime = Date.now() * 0.002;
+            for (let i = 0; i < 15; i++) {
+                const x = (i * 73) % canvas.width;
+                const y = (canvas.height - (i * 51 + bubbleTime * 30) % canvas.height);
+                const size = 3 + (i % 4) * 2;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            break;
+            
+        case 'retrowave':
+            const retroGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            retroGrad.addColorStop(0, '#0a0a1a');
+            retroGrad.addColorStop(0.5, '#2a1a3a');
+            retroGrad.addColorStop(1, '#1a0a2a');
+            ctx.fillStyle = retroGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Sun
+            const sunY = canvas.height * 0.4;
+            const retroSunGrad = ctx.createLinearGradient(0, sunY - 60, 0, sunY + 60);
+            retroSunGrad.addColorStop(0, '#ff6b6b');
+            retroSunGrad.addColorStop(0.5, '#feca57');
+            retroSunGrad.addColorStop(1, '#ff9ff3');
+            ctx.fillStyle = retroSunGrad;
+            ctx.beginPath();
+            ctx.arc(canvas.width * 0.5, sunY, 60, 0, Math.PI * 2);
+            ctx.fill();
+            // Grid lines
+            ctx.strokeStyle = 'rgba(255, 0, 150, 0.3)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 10; i++) {
+                const y = canvas.height * 0.6 + i * 20;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            break;
+            
+        case 'autumn':
+            const autumnGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            autumnGrad.addColorStop(0, '#2a1a0a');
+            autumnGrad.addColorStop(0.5, '#3a2a1a');
+            autumnGrad.addColorStop(1, '#1a1005');
+            ctx.fillStyle = autumnGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Falling leaves
+            const leafTime = Date.now() * 0.001;
+            const leafColors = ['rgba(200, 100, 50, 0.5)', 'rgba(220, 150, 50, 0.5)', 'rgba(180, 80, 30, 0.5)'];
+            for (let i = 0; i < 15; i++) {
+                ctx.fillStyle = leafColors[i % 3];
+                const x = ((i * 89) + Math.sin(leafTime + i) * 20) % canvas.width;
+                const y = ((i * 67) + leafTime * 25) % canvas.height;
+                ctx.beginPath();
+                ctx.ellipse(x, y, 6, 4, leafTime + i, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            break;
+            
+        case 'twilight':
+            const twilightGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            twilightGrad.addColorStop(0, '#1a0a2a');
+            twilightGrad.addColorStop(0.3, '#3a1a4a');
+            twilightGrad.addColorStop(0.6, '#5a2a3a');
+            twilightGrad.addColorStop(1, '#1a0a1a');
+            ctx.fillStyle = twilightGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Twilight stars
+            ctx.fillStyle = 'rgba(255, 200, 255, 0.4)';
+            for (let i = 0; i < 40; i++) {
+                const x = (i * 113.7) % canvas.width;
+                const y = (i * 67.3) % (canvas.height * 0.6);
+                const twinkle = Math.sin(Date.now() * 0.003 + i) * 0.5 + 0.5;
+                ctx.globalAlpha = 0.3 + twinkle * 0.4;
+                ctx.beginPath();
+                ctx.arc(x, y, 1 + (i % 2), 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+            break;
+            
+        case 'mountain':
+            const mountainGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            mountainGrad.addColorStop(0, '#1a2a3a');
+            mountainGrad.addColorStop(0.4, '#2a3a4a');
+            mountainGrad.addColorStop(1, '#0a1a2a');
+            ctx.fillStyle = mountainGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Mountain silhouettes
+            ctx.fillStyle = 'rgba(20, 30, 50, 0.8)';
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            ctx.lineTo(150, canvas.height - 200);
+            ctx.lineTo(300, canvas.height - 120);
+            ctx.lineTo(450, canvas.height - 280);
+            ctx.lineTo(600, canvas.height - 150);
+            ctx.lineTo(750, canvas.height - 220);
+            ctx.lineTo(canvas.width, canvas.height - 100);
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+            // Snow caps
+            ctx.fillStyle = 'rgba(200, 220, 255, 0.3)';
+            ctx.beginPath();
+            ctx.moveTo(450, canvas.height - 280);
+            ctx.lineTo(420, canvas.height - 230);
+            ctx.lineTo(480, canvas.height - 230);
+            ctx.closePath();
+            ctx.fill();
+            break;
+            
+        case 'cherry':
+            const cherryGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            cherryGrad.addColorStop(0, '#2a1525');
+            cherryGrad.addColorStop(0.5, '#3a2535');
+            cherryGrad.addColorStop(1, '#1a1020');
+            ctx.fillStyle = cherryGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Cherry blossoms falling
+            const cherryTime = Date.now() * 0.001;
+            for (let i = 0; i < 25; i++) {
+                const x = ((i * 67) + cherryTime * 25 + Math.sin(cherryTime + i * 0.5) * 30) % canvas.width;
+                const y = ((i * 43) + cherryTime * 15) % canvas.height;
+                ctx.fillStyle = `rgba(255, ${180 + (i % 40)}, ${200 + (i % 30)}, 0.5)`;
+                ctx.beginPath();
+                ctx.ellipse(x, y, 5, 3, cherryTime * 2 + i, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            break;
+            
+        case 'cosmos':
+            const cosmosGrad = ctx.createRadialGradient(canvas.width * 0.3, canvas.height * 0.4, 0, canvas.width * 0.5, canvas.height * 0.5, canvas.width);
+            cosmosGrad.addColorStop(0, '#2a1a4a');
+            cosmosGrad.addColorStop(0.3, '#1a1a3a');
+            cosmosGrad.addColorStop(0.7, '#0a0a2a');
+            cosmosGrad.addColorStop(1, '#050510');
+            ctx.fillStyle = cosmosGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Cosmic dust and stars
+            const cosmosTime = Date.now() * 0.0005;
+            for (let i = 0; i < 80; i++) {
+                const x = (i * 97.3 + cosmosTime * 10) % canvas.width;
+                const y = (i * 61.7) % canvas.height;
+                const twinkle = Math.sin(Date.now() * 0.005 + i * 0.7) * 0.5 + 0.5;
+                ctx.fillStyle = `rgba(${200 + (i % 55)}, ${180 + (i % 75)}, 255, ${0.2 + twinkle * 0.5})`;
+                ctx.beginPath();
+                ctx.arc(x, y, 1 + (i % 3) * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            // Nebula clouds
+            for (let i = 0; i < 3; i++) {
+                const nebulaGrad = ctx.createRadialGradient(
+                    (i * 300 + 100) % canvas.width, (i * 200 + 100) % canvas.height, 0,
+                    (i * 300 + 100) % canvas.width, (i * 200 + 100) % canvas.height, 120
+                );
+                nebulaGrad.addColorStop(0, `rgba(${100 + i * 40}, 50, ${200 - i * 30}, 0.15)`);
+                nebulaGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = nebulaGrad;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            break;
+            
+        case 'volcanic':
+            const volcanicGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            volcanicGrad.addColorStop(0, '#1a0505');
+            volcanicGrad.addColorStop(0.4, '#2a0a0a');
+            volcanicGrad.addColorStop(0.7, '#3a1505');
+            volcanicGrad.addColorStop(1, '#0a0202');
+            ctx.fillStyle = volcanicGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Lava glow from bottom
+            const lavaGlow = ctx.createRadialGradient(canvas.width * 0.5, canvas.height + 50, 0, canvas.width * 0.5, canvas.height, 300);
+            lavaGlow.addColorStop(0, 'rgba(255, 100, 0, 0.4)');
+            lavaGlow.addColorStop(0.5, 'rgba(255, 50, 0, 0.2)');
+            lavaGlow.addColorStop(1, 'rgba(100, 0, 0, 0)');
+            ctx.fillStyle = lavaGlow;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Ember particles rising
+            const emberTime = Date.now() * 0.002;
+            ctx.fillStyle = 'rgba(255, 150, 50, 0.6)';
+            for (let i = 0; i < 20; i++) {
+                const x = (i * 83 + Math.sin(emberTime + i) * 20) % canvas.width;
+                const y = canvas.height - ((i * 47 + emberTime * 40) % (canvas.height * 0.7));
+                ctx.beginPath();
+                ctx.arc(x, y, 2 + (i % 3), 0, Math.PI * 2);
+                ctx.fill();
+            }
+            break;
+            
+        case 'synthwave':
+            const synthGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            synthGrad.addColorStop(0, '#0a0015');
+            synthGrad.addColorStop(0.4, '#1a0030');
+            synthGrad.addColorStop(0.6, '#2a0045');
+            synthGrad.addColorStop(1, '#0a0010');
+            ctx.fillStyle = synthGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Synthwave sun
+            const synthSunY = canvas.height * 0.35;
+            const synthSunGrad = ctx.createLinearGradient(0, synthSunY - 70, 0, synthSunY + 70);
+            synthSunGrad.addColorStop(0, '#ff2a6d');
+            synthSunGrad.addColorStop(0.5, '#ff6b2b');
+            synthSunGrad.addColorStop(1, '#d61c7b');
+            ctx.fillStyle = synthSunGrad;
+            ctx.beginPath();
+            ctx.arc(canvas.width * 0.5, synthSunY, 70, 0, Math.PI * 2);
+            ctx.fill();
+            // Horizontal lines through sun
+            ctx.fillStyle = '#0a0015';
+            for (let i = 0; i < 5; i++) {
+                ctx.fillRect(canvas.width * 0.5 - 80, synthSunY - 30 + i * 15, 160, 3);
+            }
+            // Grid floor
+            ctx.strokeStyle = 'rgba(255, 0, 255, 0.4)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 15; i++) {
+                const y = canvas.height * 0.55 + i * 15;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            break;
+            
+        case 'ethereal':
+            const etherealGrad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            etherealGrad.addColorStop(0, '#1a1a2a');
+            etherealGrad.addColorStop(0.5, '#2a2a4a');
+            etherealGrad.addColorStop(1, '#1a2a3a');
+            ctx.fillStyle = etherealGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Ethereal wisps
+            const etherealTime = Date.now() * 0.001;
+            for (let i = 0; i < 8; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height * 0.3 + i * 50);
+                for (let x = 0; x < canvas.width; x += 10) {
+                    const y = canvas.height * 0.3 + i * 50 + Math.sin(x * 0.01 + etherealTime + i * 0.8) * 40;
+                    ctx.lineTo(x, y);
+                }
+                ctx.strokeStyle = `rgba(${150 + i * 10}, ${200 + i * 5}, 255, 0.15)`;
+                ctx.lineWidth = 15 + i * 3;
+                ctx.stroke();
+            }
+            // Floating particles
+            ctx.fillStyle = 'rgba(200, 220, 255, 0.4)';
+            for (let i = 0; i < 30; i++) {
+                const x = (i * 67 + etherealTime * 15) % canvas.width;
+                const y = (i * 43 + Math.sin(etherealTime + i) * 30) % canvas.height;
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            break;
+            
+        case 'firefly':
+            const fireflyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            fireflyGrad.addColorStop(0, '#0a1510');
+            fireflyGrad.addColorStop(0.5, '#0a2015');
+            fireflyGrad.addColorStop(1, '#050a08');
+            ctx.fillStyle = fireflyGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Fireflies
+            const fireflyTime = Date.now() * 0.002;
+            for (let i = 0; i < 25; i++) {
+                const x = (i * 73 + Math.sin(fireflyTime * 0.5 + i * 2) * 50) % canvas.width;
+                const y = (i * 47 + Math.cos(fireflyTime * 0.3 + i * 1.5) * 40) % canvas.height;
+                const pulse = Math.sin(fireflyTime * 2 + i * 3) * 0.5 + 0.5;
+                
+                // Glow
+                const glowGrad = ctx.createRadialGradient(x, y, 0, x, y, 15 + pulse * 10);
+                glowGrad.addColorStop(0, `rgba(255, 255, 100, ${0.4 + pulse * 0.4})`);
+                glowGrad.addColorStop(0.5, `rgba(200, 255, 50, ${0.2 + pulse * 0.2})`);
+                glowGrad.addColorStop(1, 'rgba(100, 200, 0, 0)');
+                ctx.fillStyle = glowGrad;
+                ctx.fillRect(x - 25, y - 25, 50, 50);
+                
+                // Core
+                ctx.fillStyle = `rgba(255, 255, 200, ${0.6 + pulse * 0.4})`;
+                ctx.beginPath();
+                ctx.arc(x, y, 2 + pulse, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            break;
+            
+        case 'northern':
+            const northernGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            northernGrad.addColorStop(0, '#050515');
+            northernGrad.addColorStop(0.5, '#0a0a25');
+            northernGrad.addColorStop(1, '#050510');
+            ctx.fillStyle = northernGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Northern lights waves
+            const northernTime = Date.now() * 0.001;
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height * 0.2 + i * 60);
+                for (let x = 0; x < canvas.width; x += 5) {
+                    const y = canvas.height * 0.2 + i * 60 + 
+                              Math.sin(x * 0.008 + northernTime + i * 0.5) * 50 +
+                              Math.sin(x * 0.015 + northernTime * 1.5) * 20;
+                    ctx.lineTo(x, y);
+                }
+                const hue = 120 + i * 30; // Green to cyan
+                ctx.strokeStyle = `hsla(${hue}, 80%, 50%, 0.25)`;
+                ctx.lineWidth = 30 + i * 10;
+                ctx.stroke();
+            }
+            // Stars
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            for (let i = 0; i < 50; i++) {
+                const x = (i * 83.7) % canvas.width;
+                const y = (i * 37.3) % canvas.height;
+                ctx.beginPath();
+                ctx.arc(x, y, 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            break;
+            
+        case 'default':
+            // Default dark background
+            const defaultGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            defaultGrad.addColorStop(0, '#0a0a15');
+            defaultGrad.addColorStop(0.5, '#0f0f20');
+            defaultGrad.addColorStop(1, '#0a0a15');
+            ctx.fillStyle = defaultGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            break;
+            
+        default:
+            ctx.fillStyle = '#0a0a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    
+    // Draw ground
+    ctx.fillStyle = '#1a1a2a';
+    ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
+    
+    ctx.restore();
 }
 
 // Helper function to adjust color brightness
@@ -3790,6 +5169,7 @@ function saveProgress() {
     // Global settings (not per user)
     localStorage.setItem('neonDashJumpKey', jumpKey);
     localStorage.setItem('neonDashMusic', isMusicEnabled);
+    localStorage.setItem('neonDashProgressBar', showProgressBar);
     localStorage.setItem('neonDashLastUser', userId);
 }
 
@@ -3847,6 +5227,9 @@ function loadProgress() {
 
     const savedMusic = localStorage.getItem('neonDashMusic');
     if (savedMusic !== null) isMusicEnabled = JSON.parse(savedMusic);
+    
+    const savedProgressBar = localStorage.getItem('neonDashProgressBar');
+    if (savedProgressBar !== null) showProgressBar = JSON.parse(savedProgressBar);
 
     // Load volume settings
     const savedMusicVol = localStorage.getItem('neonDashMusicVolume');
@@ -3877,7 +5260,6 @@ function switchAccount(newId) {
 function updateUI() {
     document.getElementById('coin-count').innerText = coins;
     document.getElementById('high-score').innerText = highScore;
-    document.getElementById('high-score-display').innerText = highScore;
     const customizeCoinCount = document.getElementById('customize-coin-count');
     if (customizeCoinCount) {
         customizeCoinCount.innerText = coins;
@@ -3926,6 +5308,7 @@ function closeSettings() {
 
 function updateSettingsUI() {
     document.getElementById('toggle-music-btn').innerText = isMusicEnabled ? 'ON' : 'OFF';
+    document.getElementById('toggle-progress-btn').innerText = showProgressBar ? 'ON' : 'OFF';
     document.getElementById('bind-jump-btn').innerText = jumpKey === 'Space' ? 'SPACE' : jumpKey;
     document.getElementById('account-id-display').innerText = userId;
     
@@ -3951,6 +5334,12 @@ document.getElementById('toggle-music-btn').addEventListener('click', () => {
     updateSettingsUI();
     if (!isMusicEnabled) soundManager.stop();
     else soundManager.resume();
+});
+
+document.getElementById('toggle-progress-btn').addEventListener('click', () => {
+    showProgressBar = !showProgressBar;
+    localStorage.setItem('neonDashProgressBar', showProgressBar);
+    updateSettingsUI();
 });
 
 // Volume sliders
@@ -3997,6 +5386,7 @@ document.getElementById('go-retry-btn').addEventListener('click', () => {
     document.getElementById('wasted-screen').classList.remove('active');
     document.querySelector('.game-title').style.opacity = '0.2';
     document.getElementById('current-level-display').classList.add('visible');
+    document.getElementById('current-level-num').innerText = isHardcoreMode ? '💀' : (isUnlimitedMode ? '∞' : currentLevel);
     soundManager.unpause();
 });
 
@@ -4007,7 +5397,7 @@ document.getElementById('go-menu-btn').addEventListener('click', () => {
 });
 
 document.getElementById('win-next-btn').addEventListener('click', () => {
-    if (currentLevel < 10) {
+    if (!isUnlimitedMode && currentLevel < 20) {
         currentLevel++;
         startLevel(currentLevel);
     } else {
@@ -4029,6 +5419,69 @@ document.getElementById('cust-back-btn').addEventListener('click', () => {
     showLevelSelect();
     document.getElementById('customize-screen').classList.remove('active');
 });
+
+// Preview button - shows full background preview
+document.getElementById('cust-preview-btn').addEventListener('click', () => {
+    if (!selectedItem || selectedItem.type !== 'background') return;
+    
+    // Hide customize screen
+    document.getElementById('customize-screen').classList.remove('active');
+    
+    // Show preview overlay
+    const overlay = document.getElementById('bg-preview-overlay');
+    overlay.style.display = 'flex';
+    
+    // Start background preview render
+    gameState = 'BG_PREVIEW';
+    startFullBackgroundPreview(selectedItem.value);
+});
+
+// Background preview overlay - click to return
+document.getElementById('bg-preview-overlay').addEventListener('click', () => {
+    closeBackgroundPreview();
+});
+
+// Background preview - keypress to return
+function handlePreviewKeypress(e) {
+    if (gameState === 'BG_PREVIEW') {
+        closeBackgroundPreview();
+    }
+}
+document.addEventListener('keydown', handlePreviewKeypress);
+
+// Close background preview and return to customize
+function closeBackgroundPreview() {
+    if (gameState !== 'BG_PREVIEW') return;
+    
+    // Hide overlay
+    document.getElementById('bg-preview-overlay').style.display = 'none';
+    
+    // Show customize screen again
+    document.getElementById('customize-screen').classList.add('active');
+    gameState = 'CUSTOMIZE';
+    
+    // Stop the preview render loop
+    if (bgPreviewAnimFrame) {
+        cancelAnimationFrame(bgPreviewAnimFrame);
+        bgPreviewAnimFrame = null;
+    }
+}
+
+// Full background preview render loop
+let bgPreviewAnimFrame = null;
+function startFullBackgroundPreview(bgName) {
+    function renderBgPreview() {
+        if (gameState !== 'BG_PREVIEW') {
+            bgPreviewAnimFrame = null;
+            return;
+        }
+        
+        drawFullBackgroundPreview(bgName);
+        bgPreviewAnimFrame = requestAnimationFrame(renderBgPreview);
+    }
+    
+    renderBgPreview();
+}
 
 // Unlock button
 document.getElementById('cust-unlock-btn').addEventListener('click', () => {
@@ -4081,4 +5534,3 @@ document.getElementById('cust-unlock-btn').addEventListener('click', () => {
 loadProgress();
 init();
 loop();
-

@@ -24,11 +24,7 @@
                         id="coin-count">0</span></div>
             </div>
 
-            <div id="start-screen" class="screen active">
-                <p style="margin-top: 10rem;">Press SPACE to Start</p>
-                <p style="font-size: 1rem; opacity: 0.7; margin-top: 1rem;">High Score: <span
-                        id="high-score-display">0</span></p>
-            </div>
+            <!-- Start screen removed - level select is now the main menu -->
 
             <div id="settings-btn"
                 style="position: absolute; top: 20px; left: 20px; font-size: 2rem; cursor: pointer; pointer-events: all; z-index: 100;">
@@ -60,6 +56,10 @@
                     <label>Jump Key</label>
                     <button id="bind-jump-btn" class="setting-btn">SPACE</button>
                 </div>
+                <div class="setting-item">
+                    <label>Progress Bar</label>
+                    <button id="toggle-progress-btn" class="setting-btn">ON</button>
+                </div>
 
                 <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--primary-color);">Account</h3>
                 <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
@@ -80,52 +80,117 @@
                 <button id="close-settings-btn" class="customize-button" style="margin-top: 2rem;">Close</button>
             </div>
 
-            <div id="level-select-screen" class="screen">
-                <h2>SELECT LEVEL</h2>
-                <div class="level-grid">
-                    <button class="level-btn unlocked" data-level="1">
-                        <div class="level-number">1</div>
-                        <div class="level-name">Beginner</div>
-                    </button>
-                    <button class="level-btn locked" data-level="2">
-                        <div class="level-number">2</div>
-                        <div class="level-name">Easy</div>
-                    </button>
-                    <button class="level-btn locked" data-level="3">
-                        <div class="level-number">3</div>
-                        <div class="level-name">Medium</div>
-                    </button>
-                    <button class="level-btn locked" data-level="4">
-                        <div class="level-number">4</div>
-                        <div class="level-name">Hard</div>
-                    </button>
-                    <button class="level-btn locked" data-level="5">
-                        <div class="level-number">5</div>
-                        <div class="level-name">Expert</div>
-                    </button>
-                    <button class="level-btn locked" data-level="6">
-                        <div class="level-number">6</div>
-                        <div class="level-name">Insane</div>
-                    </button>
-                    <button class="level-btn locked" data-level="7">
-                        <div class="level-number">7</div>
-                        <div class="level-name">Demon</div>
-                    </button>
-                    <button class="level-btn locked" data-level="8">
-                        <div class="level-number">8</div>
-                        <div class="level-name">Void</div>
-                    </button>
-                    <button class="level-btn locked" data-level="9">
-                        <div class="level-number">9</div>
-                        <div class="level-name">Omega</div>
-                    </button>
-                    <button class="level-btn locked" data-level="10">
-                        <div class="level-number">10</div>
-                        <div class="level-name">Infinity</div>
-                    </button>
+            <div id="level-select-screen" class="screen level-select-screen active">
+                <div class="level-select-layout">
+                    <!-- Quest Levels Section -->
+                    <div class="level-section">
+                        <h3 class="section-title">⚔️ QUEST LEVELS</h3>
+                        <div class="level-grid" id="quest-level-grid">
+                            <button class="level-btn unlocked" data-level="1">
+                                <div class="level-number">1</div>
+                                <div class="level-name">Beginner</div>
+                            </button>
+                            <button class="level-btn locked" data-level="2">
+                                <div class="level-number">2</div>
+                                <div class="level-name">Easy</div>
+                            </button>
+                            <button class="level-btn locked" data-level="3">
+                                <div class="level-number">3</div>
+                                <div class="level-name">Medium</div>
+                            </button>
+                            <button class="level-btn locked" data-level="4">
+                                <div class="level-number">4</div>
+                                <div class="level-name">Hard</div>
+                            </button>
+                            <button class="level-btn locked" data-level="5">
+                                <div class="level-number">5</div>
+                                <div class="level-name">Expert</div>
+                            </button>
+                            <button class="level-btn locked" data-level="6">
+                                <div class="level-number">6</div>
+                                <div class="level-name">Insane</div>
+                            </button>
+                            <button class="level-btn locked" data-level="7">
+                                <div class="level-number">7</div>
+                                <div class="level-name">Demon</div>
+                            </button>
+                            <button class="level-btn locked" data-level="8">
+                                <div class="level-number">8</div>
+                                <div class="level-name">Void</div>
+                            </button>
+                            <button class="level-btn locked" data-level="9">
+                                <div class="level-number">9</div>
+                                <div class="level-name">Omega</div>
+                            </button>
+                            <button class="level-btn locked" data-level="10">
+                                <div class="level-number">10</div>
+                                <div class="level-name">Infinity</div>
+                            </button>
+                            <button class="level-btn locked" data-level="11">
+                                <div class="level-number">11</div>
+                                <div class="level-name">Abyss</div>
+                            </button>
+                            <button class="level-btn locked" data-level="12">
+                                <div class="level-number">12</div>
+                                <div class="level-name">Chaos</div>
+                            </button>
+                            <button class="level-btn locked" data-level="13">
+                                <div class="level-number">13</div>
+                                <div class="level-name">Nightmare</div>
+                            </button>
+                            <button class="level-btn locked" data-level="14">
+                                <div class="level-number">14</div>
+                                <div class="level-name">Oblivion</div>
+                            </button>
+                            <button class="level-btn locked" data-level="15">
+                                <div class="level-number">15</div>
+                                <div class="level-name">Cataclysm</div>
+                            </button>
+                            <button class="level-btn locked" data-level="16">
+                                <div class="level-number">16</div>
+                                <div class="level-name">Apocalypse</div>
+                            </button>
+                            <button class="level-btn locked" data-level="17">
+                                <div class="level-number">17</div>
+                                <div class="level-name">Armageddon</div>
+                            </button>
+                            <button class="level-btn locked" data-level="18">
+                                <div class="level-number">18</div>
+                                <div class="level-name">Extinction</div>
+                            </button>
+                            <button class="level-btn locked" data-level="19">
+                                <div class="level-number">19</div>
+                                <div class="level-name">Annihilation</div>
+                            </button>
+                            <button class="level-btn locked" data-level="20">
+                                <div class="level-number">20</div>
+                                <div class="level-name">Transcendence</div>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Unlimited Mode Section -->
+                    <div class="level-section unlimited-section">
+                        <h3 class="section-title">🏆 UNLIMITED MODES</h3>
+                        <p class="unlimited-desc">No finish line. How far can you go?</p>
+                        <div class="unlimited-grid">
+                            <button class="level-btn unlimited-btn unlocked" data-level="unlimited">
+                                <div class="level-number">∞</div>
+                                <div class="level-name">Unlimited</div>
+                            </button>
+                            <button class="level-btn hardcore-btn unlocked" data-level="hardcore">
+                                <div class="level-number">💀</div>
+                                <div class="level-name">Hardcore</div>
+                            </button>
+                        </div>
+                        <p class="hardcore-desc">Hardcore: No powerups. No coins. Pure skill.</p>
+                    </div>
                 </div>
-                <button id="customize-btn" class="customize-button">Customize Cube</button>
-                <p class="back-hint">Press ESC to go back</p>
+                
+                <div class="level-select-footer">
+                    <button id="customize-btn" class="customize-button">Cosmetics</button>
+                </div>
+                <p class="back-hint">NeonDash v1.0</p>
             </div>
 
             <div id="game-over-screen" class="screen">
@@ -216,9 +281,20 @@
                     <button id="cust-back-btn" class="back-button">
                         <span>←</span> Back to Menu
                     </button>
+                    <button id="cust-preview-btn" class="preview-button" style="display: none;">
+                        <span>👁️</span> Preview
+                    </button>
                     <button id="cust-unlock-btn" class="unlock-button" style="display: none;">
                         <span>🔓</span> Unlock for <span id="unlock-price">0</span> 🪙
                     </button>
+                </div>
+            </div>
+            
+            <!-- Background Preview Overlay -->
+            <div id="bg-preview-overlay" class="bg-preview-overlay" style="display: none;">
+                <div class="preview-instructions">
+                    <p>Previewing Background</p>
+                    <p class="preview-hint">Click anywhere or press any key to return</p>
                 </div>
             </div>
 

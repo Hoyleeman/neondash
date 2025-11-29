@@ -1,9 +1,9 @@
 <!DOCTYPE html>
+
 <html lang="en">
 
 <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Neon Dash</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,19 +16,68 @@
     <div id="app">
         <div class="ui-layer">
             <h1 class="game-title">HOYLE HOPS</h1>
-            <div id="score-container">
-                <div style="font-size: 1rem; opacity: 0.7;">HIGH SCORE</div>
-                <div style="font-size: 2rem; margin-bottom: 0.5rem;"><span id="high-score-display">0</span></div>
-                <div style="font-size: 0.9rem; opacity: 0.6;">SCORE</div>
-                <div style="font-size: 1.5rem;"><span id="score">0</span></div>
-            </div>
+            <div id="score-container">SCORE: <span id="score">0</span></div>
             <div id="currency-container">
-                <div class="stat-item">🏆 <span id="high-score">0</span></div>
-                <div class="stat-item">🪙 <span id="coin-count">0</span></div>
+                <div style="font-size: 1rem; font-weight: 700; text-shadow: 0 0 5px rgba(255,255,255,0.5); opacity: 0.8;">HIGH SCORE: <span
+                        id="high-score">0</span></div>
+                <div style="font-size: 1.5rem; font-weight: 700; text-shadow: 0 0 5px rgba(255,255,255,0.5);">🪙 <span
+                        id="coin-count">0</span></div>
             </div>
 
             <div id="start-screen" class="screen active">
-                <p>Press SPACE or CLICK to Start</p>
+                <p style="margin-top: 10rem;">Press SPACE to Start</p>
+                <p style="font-size: 1rem; opacity: 0.7; margin-top: 1rem;">High Score: <span
+                        id="high-score-display">0</span></p>
+            </div>
+
+            <div id="settings-btn"
+                style="position: absolute; top: 20px; left: 20px; font-size: 2rem; cursor: pointer; pointer-events: all; z-index: 100;">
+                ⚙️</div>
+
+            <div id="settings-modal" class="screen">
+                <h2>SETTINGS</h2>
+                <div class="setting-item">
+                    <label>Sound</label>
+                    <button id="toggle-music-btn" class="setting-btn">ON</button>
+                </div>
+                <div class="setting-item">
+                    <label>Music Volume</label>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="range" id="music-volume" min="0" max="100" value="50" 
+                            style="width: 120px; accent-color: var(--primary-color); pointer-events: all;">
+                        <span id="music-volume-display" style="min-width: 35px;">50%</span>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <label>SFX Volume</label>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="range" id="sfx-volume" min="0" max="100" value="70" 
+                            style="width: 120px; accent-color: var(--primary-color); pointer-events: all;">
+                        <span id="sfx-volume-display" style="min-width: 35px;">70%</span>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <label>Jump Key</label>
+                    <button id="bind-jump-btn" class="setting-btn">SPACE</button>
+                </div>
+
+                <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--primary-color);">Account</h3>
+                <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
+                    <label style="font-size: 0.9rem; opacity: 0.7;">Your ID:</label>
+                    <div style="display: flex; gap: 10px; width: 100%;">
+                        <div id="account-id-display"
+                            style="background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 4px; flex: 1; font-family: monospace;">
+                            ...</div>
+                        <button id="copy-account-btn" class="setting-btn"
+                            style="padding: 5px 10px; min-width: auto;">Copy</button>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <button id="load-account-btn" class="customize-button" style="width: 100%; font-size: 1rem;">Load /
+                        Switch Account</button>
+                </div>
+
+                <button id="close-settings-btn" class="customize-button" style="margin-top: 2rem;">Close</button>
             </div>
 
             <div id="level-select-screen" class="screen">
@@ -101,37 +150,75 @@
                         </div>
                     </div>
                 </div>
-                <p style="margin-top: 2rem; animation: pulse 1.5s infinite;">Press SPACE to Retry</p>
-                <p style="margin-top: 2rem; animation: pulse 1.5s infinite;">Press ESC for Menu</p>
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button id="go-retry-btn" class="customize-button">Retry</button>
+                    <button id="go-menu-btn" class="customize-button" style="background: #444;">Menu</button>
+                </div>
             </div>
 
             <div id="level-complete-screen" class="screen">
                 <h2>LEVEL COMPLETE!</h2>
                 <p id="level-complete-message">Great job!</p>
-                <p>Press SPACE to Continue</p>
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button id="win-next-btn" class="customize-button">Continue</button>
+                    <button id="win-menu-btn" class="customize-button" style="background: #444;">Menu</button>
+                </div>
             </div>
 
-            <div id="customize-screen" class="screen">
-                <h2>CUSTOMIZE CUBE</h2>
-                <div style="text-align: right; margin-bottom: 1rem;">
-                    <span style="font-size: 1.2rem;">🪙 <span id="customize-coin-count">0</span></span>
+            <div id="customize-screen" class="screen customize-screen">
+                <div class="customize-header">
+                    <h2>CUSTOMIZE</h2>
+                    <div class="coin-display">
+                        <span class="coin-icon">🪙</span>
+                        <span id="customize-coin-count">0</span>
+                    </div>
                 </div>
-                <div class="customize-container">
-                    <div class="preview-section">
-                        <canvas id="preview-canvas" width="200" height="200"></canvas>
+                
+                <div class="customize-layout">
+                    <div class="preview-panel">
+                        <div class="preview-label">PREVIEW</div>
+                        <canvas id="preview-canvas" width="220" height="220"></canvas>
+                        <div class="preview-glow"></div>
                     </div>
-                    <div class="customization-section">
-                        <h3>Colors</h3>
-                        <div class="color-presets"></div>
-                        <div class="custom-color-picker">
-                            <label for="color-input">Custom:</label>
-                            <input type="color" id="color-input" value="#00f3ff">
+                    
+                    <div class="shop-panel">
+                        <div class="shop-section">
+                            <div class="section-header">
+                                <span class="section-icon">🎨</span>
+                                <h3>Colors</h3>
+                            </div>
+                            <div class="color-presets"></div>
+                            <div class="custom-color-picker">
+                                <label for="color-input">Custom Color</label>
+                                <input type="color" id="color-input" value="#00f3ff">
+                            </div>
                         </div>
-                        <h3 style="margin-top: 1.5rem;">Shapes</h3>
-                        <div class="shape-grid"></div>
-                        <h3 style="margin-top: 1.5rem;">Backgrounds</h3>
-                        <div class="background-grid"></div>
+                        
+                        <div class="shop-section">
+                            <div class="section-header">
+                                <span class="section-icon">⬡</span>
+                                <h3>Shapes</h3>
+                            </div>
+                            <div class="shape-grid"></div>
+                        </div>
+                        
+                        <div class="shop-section">
+                            <div class="section-header">
+                                <span class="section-icon">🌄</span>
+                                <h3>Backgrounds</h3>
+                            </div>
+                            <div class="background-grid"></div>
+                        </div>
                     </div>
+                </div>
+                
+                <div class="customize-footer">
+                    <button id="cust-back-btn" class="back-button">
+                        <span>←</span> Back to Menu
+                    </button>
+                    <button id="cust-unlock-btn" class="unlock-button" style="display: none;">
+                        <span>🔓</span> Unlock for <span id="unlock-price">0</span> 🪙
+                    </button>
                 </div>
             </div>
 
@@ -140,6 +227,7 @@
             </div>
 
             <div id="current-level-display">LEVEL <span id="current-level-num">1</span></div>
+            <div id="heart-container"></div>
         </div>
         <canvas id="game-canvas"></canvas>
     </div>

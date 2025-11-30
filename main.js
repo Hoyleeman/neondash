@@ -4576,9 +4576,6 @@ function update(dt = 1) {
     }
     particles.length = writeIdx;
 
-    floorPatternOffset -= gameSpeed * slowMotionFactor * dt;
-    if (floorPatternOffset <= -40) floorPatternOffset = 0;
-
     checkCollisions();
 }
 
@@ -6906,20 +6903,6 @@ function draw() {
     ctx.moveTo(0, groundY);
     ctx.lineTo(cw, groundY);
     ctx.stroke();
-
-    // Floor pattern - batch all lines together (skip if simplifying)
-    if (!perfSettings.simplifyBackgrounds) {
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        const floorStart = (floorPatternOffset | 0);
-        const floorStep = 40;
-        for (let i = floorStart; i < cw; i += floorStep) {
-            ctx.moveTo(i, groundY);
-            ctx.lineTo(i - 20, ch);
-        }
-        ctx.stroke();
-    }
 
     if (finishLine) finishLine.draw();
 

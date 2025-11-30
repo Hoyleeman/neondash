@@ -79,15 +79,16 @@ class ObjectPool {
 
 // Performance settings - adjust based on device capability
 const perfSettings = {
-    maxParticles: 120,           // Optimized particle limit
-    maxCubeFragments: 40,
+    maxParticles: 80,            // Reduced particle limit for smoother performance
+    maxCubeFragments: 30,        // Reduced fragments
     shadowsEnabled: true,        // Can be toggled in settings
     particlesEnabled: true,      // Can be toggled in settings
-    reducedShadowBlur: 6,        // Lower shadow blur for performance
+    reducedShadowBlur: 4,        // Lower shadow blur for performance
     skipBackgroundDetails: false, // Skip expensive background elements
-    frameSkipThreshold: 2.5,     // Skip frames if delta > this (falling behind)
+    frameSkipThreshold: 2.0,     // Skip frames if delta > this (falling behind)
     useObjectPooling: true,      // Reuse objects instead of creating new ones
     batchRendering: true,        // Batch similar draw calls
+    throttleParticleSpawn: 0.7,  // Reduce particle spawn rate
 };
 
 
@@ -134,19 +135,28 @@ function detectPerformanceLevel() {
     const isLowEnd = navigator.hardwareConcurrency <= 2 || 
                      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
+    // Check for medium-end devices
+    const isMedium = navigator.hardwareConcurrency <= 4;
+    
     if (isLowEnd) {
-        perfSettings.maxParticles = 60;
-        perfSettings.maxCubeFragments = 20;
-        perfSettings.reducedShadowBlur = 4;
+        perfSettings.maxParticles = 40;
+        perfSettings.maxCubeFragments = 15;
+        perfSettings.reducedShadowBlur = 2;
         perfSettings.skipBackgroundDetails = true;
         perfSettings.shadowsEnabled = false;
+        perfSettings.throttleParticleSpawn = 0.4;
         console.log('🔧 Low-end device detected - using reduced graphics');
+    } else if (isMedium) {
+        perfSettings.maxParticles = 60;
+        perfSettings.maxCubeFragments = 25;
+        perfSettings.reducedShadowBlur = 3;
+        perfSettings.throttleParticleSpawn = 0.6;
+        console.log('🔧 Medium device detected - using balanced graphics');
     }
     
-    // Check for high refresh rate displays
+    // Check for high refresh rate displays - don't increase particles, just note it
     if (window.screen && window.screen.availWidth > 1920) {
-        perfSettings.maxParticles = 150;
-        console.log('🔧 High-res display detected - increased particle limit');
+        console.log('🔧 High-res display detected');
     }
 }
 detectPerformanceLevel();
@@ -1559,8 +1569,8 @@ class Player {
             const thrusterY = isSuperdudeFlying ? this.y + this.size - superdudespriteSize / 2 : this.y + this.size;
             
             // Main thruster flames (using object pooling, respects particle setting)
-            if (perfSettings.particlesEnabled && Math.random() < 0.5 * dt && particles.length < perfSettings.maxParticles) {
-                for (let i = 0; i < 2; i++) { // Reduced from 3
+            if (perfSettings.particlesEnabled && Math.random() < 0.35 * dt && particles.length < perfSettings.maxParticles) {
+                for (let i = 0; i < 1; i++) { // Reduced for performance
                     const p = getPooledParticle(
                         isSuperdudeFlying ? thrusterX : thrusterX + (Math.random() - 0.5) * 15,
                         isSuperdudeFlying ? thrusterY + (Math.random() - 0.5) * 15 : thrusterY,
@@ -1574,7 +1584,7 @@ class Player {
             }
             
             // Yellow/white hot center flames
-            if (perfSettings.particlesEnabled && Math.random() < 0.3 * dt && particles.length < perfSettings.maxParticles - 5) {
+            if (perfSettings.particlesEnabled && Math.random() < 0.2 * dt && particles.length < perfSettings.maxParticles - 5) {
                 const p = getPooledParticle(thrusterX, thrusterY, '#ffff00');
                 p.speedX = isSuperdudeFlying ? -(6 + Math.random() * 4) : (Math.random() - 0.5) * 1;
                 p.speedY = isSuperdudeFlying ? (Math.random() - 0.5) * 1 : 6 + Math.random() * 4;
@@ -1589,7 +1599,7 @@ class Player {
             }
             
             // Smoke trail (reduced frequency)
-            if (perfSettings.particlesEnabled && Math.random() < 0.2 * dt && particles.length < perfSettings.maxParticles - 5) {
+            if (perfSettings.particlesEnabled && Math.random() < 0.12 * dt && particles.length < perfSettings.maxParticles - 5) {
                 const p = getPooledParticle(
                     isSuperdudeFlying ? thrusterX - 20 : thrusterX + (Math.random() - 0.5) * 20,
                     isSuperdudeFlying ? thrusterY + (Math.random() - 0.5) * 20 : thrusterY + 20,
@@ -2765,9 +2775,12 @@ function createParticles(x, y, count, color) {
     // Skip if particles are disabled
     if (!perfSettings.particlesEnabled) return;
     
+    // Reduce count for better performance
+    const reducedCount = Math.ceil(count * 0.6);
+    
     // Limit total particles for performance
     const availableSlots = perfSettings.maxParticles - particles.length;
-    const actualCount = Math.min(count, availableSlots);
+    const actualCount = Math.min(reducedCount, availableSlots);
     
     if (actualCount <= 0) return;
     
@@ -4034,7 +4047,7 @@ function update(dt = 1) {
         bulldozerTimer -= dt;
         
         // Spawn dust/debris particles while bulldozing (only if not blinking off)
-        if (perfSettings.particlesEnabled && Math.random() < 0.4 * dt) {
+        if (perfSettings.particlesEnabled && Math.random() < 0.25 * dt) {
             const p = getPooledParticle(player.x - 10, player.y + player.size, '#8B4513');
             p.speedX = -3 - Math.random() * 5;
             p.speedY = -1 - Math.random() * 3;
@@ -4061,7 +4074,7 @@ function update(dt = 1) {
         ghostTimer -= dt;
         
         // Spawn ethereal particles while ghosting
-        if (perfSettings.particlesEnabled && Math.random() < 0.5 * dt) {
+        if (perfSettings.particlesEnabled && Math.random() < 0.3 * dt) {
             const p = getPooledParticle(
                 player.x + Math.random() * player.size,
                 player.y + Math.random() * player.size,
@@ -4075,7 +4088,7 @@ function update(dt = 1) {
         }
         
         // Occasional wisp particles trailing behind
-        if (perfSettings.particlesEnabled && Math.random() < 0.3 * dt) {
+        if (perfSettings.particlesEnabled && Math.random() < 0.15 * dt) {
             const p = getPooledParticle(
                 player.x - 5 - Math.random() * 10,
                 player.y + player.size / 2,
@@ -4099,7 +4112,7 @@ function update(dt = 1) {
         magnetTimer -= dt;
         
         // Magnet particles around player
-        if (perfSettings.particlesEnabled && Math.random() < 0.4 * dt) {
+        if (perfSettings.particlesEnabled && Math.random() < 0.2 * dt) {
             const angle = Math.random() * Math.PI * 2;
             const dist = 40 + Math.random() * 30;
             const p = getPooledParticle(
@@ -6728,9 +6741,16 @@ function loop(currentTime) {
     const rawDelta = currentTime - lastTime;
     lastTime = currentTime;
     
+    // Skip frame if we're falling too far behind (prevents spiral)
+    if (rawDelta > 100) {
+        // Tab was in background, just request next frame
+        requestAnimationFrame(loop);
+        return;
+    }
+    
     // Normalize delta time to target FPS and cap to prevent huge jumps
     deltaTime = rawDelta / TARGET_FRAME_TIME;
-    deltaTime = Math.min(deltaTime, 3); // Cap at 3x to prevent spiral after tab switch
+    deltaTime = Math.min(deltaTime, 2); // Tighter cap for smoother gameplay
     
     // Track frame timing for performance monitoring
     updateFrameStats(rawDelta);

@@ -10,6 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./style.css">
+    <!-- Supabase Client for Cloud Database -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
@@ -20,8 +22,14 @@
             <div id="currency-container">
                 <div style="font-size: 1rem; font-weight: 700; text-shadow: 0 0 5px rgba(255,255,255,0.5); opacity: 0.8;">HIGH SCORE: <span
                         id="high-score">0</span></div>
-                <div style="font-size: 1.5rem; font-weight: 700; text-shadow: 0 0 5px rgba(255,255,255,0.5);">🪙 <span
-                        id="coin-count">0</span></div>
+                <div class="currency-row">
+                    <div class="currency-item coins">🪙 <span id="coin-count">0</span></div>
+                    <div class="currency-item hops">💎 <span id="hops-count">0</span></div>
+                </div>
+                <div class="menu-buttons-row">
+                    <button id="cosmetics-btn" class="cosmetics-top-btn">🎨 Cosmetics</button>
+                    <button id="season-pass-btn" class="season-pass-top-btn">📈 Rewards</button>
+                </div>
             </div>
 
             <!-- Start screen removed - level select is now the main menu -->
@@ -39,17 +47,17 @@
                 <div class="setting-item">
                     <label>Music Volume</label>
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <input type="range" id="music-volume" min="0" max="100" value="50" 
+                        <input type="range" id="music-volume" min="0" max="100" value="1" 
                             style="width: 120px; accent-color: var(--primary-color); pointer-events: all;">
-                        <span id="music-volume-display" style="min-width: 35px;">50%</span>
+                        <span id="music-volume-display" style="min-width: 35px;">1%</span>
                     </div>
                 </div>
                 <div class="setting-item">
                     <label>SFX Volume</label>
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <input type="range" id="sfx-volume" min="0" max="100" value="70" 
+                        <input type="range" id="sfx-volume" min="0" max="100" value="25" 
                             style="width: 120px; accent-color: var(--primary-color); pointer-events: all;">
-                        <span id="sfx-volume-display" style="min-width: 35px;">70%</span>
+                        <span id="sfx-volume-display" style="min-width: 35px;">25%</span>
                     </div>
                 </div>
                 <div class="setting-item">
@@ -59,6 +67,10 @@
                 <div class="setting-item">
                     <label>Progress Bar</label>
                     <button id="toggle-progress-btn" class="setting-btn">ON</button>
+                </div>
+                <div class="setting-item">
+                    <label>Ability Key 👑</label>
+                    <button id="bind-ability-btn" class="setting-btn">E</button>
                 </div>
 
                 <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--primary-color);">Account</h3>
@@ -72,12 +84,196 @@
                             style="padding: 5px 10px; min-width: auto;">Copy</button>
                     </div>
                 </div>
+                <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
+                    <label style="font-size: 0.9rem; opacity: 0.7;">Account Security:</label>
+                    <div id="password-status" style="font-size: 0.85rem; color: #ff5555;">🔓 No password set</div>
+                    <button id="set-password-btn" class="setting-btn" style="width: 100%;">Set Password</button>
+                </div>
+                <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
+                    <label style="font-size: 0.9rem; opacity: 0.7;">Recovery PIN (4-6 digits):</label>
+                    <div id="pin-status" style="font-size: 0.85rem; color: #ff5555;">🔓 No PIN set</div>
+                    <div style="display: flex; gap: 10px; width: 100%;">
+                        <input type="password" id="recovery-pin-input" placeholder="Enter 4-6 digit PIN" maxlength="6"
+                            style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white; font-size: 0.9rem; text-align: center; letter-spacing: 4px;">
+                        <button id="save-pin-btn" class="setting-btn" style="padding: 5px 10px;">Save</button>
+                    </div>
+                    <p style="font-size: 0.75rem; opacity: 0.5; margin-top: 0.25rem;">Use this PIN to recover your account if you forget your password</p>
+                </div>
                 <div class="setting-item">
                     <button id="load-account-btn" class="customize-button" style="width: 100%; font-size: 1rem;">Load /
                         Switch Account</button>
                 </div>
 
+                <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: #ffd700;">📊 Lifetime Stats</h3>
+                <div class="stats-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,215,0,0.2);">
+                    <div class="stat-item">
+                        <div style="font-size: 0.75rem; opacity: 0.6; text-transform: uppercase;">Deaths</div>
+                        <div id="stat-deaths" style="font-size: 1.3rem; color: #ff5555; font-weight: 700;">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div style="font-size: 0.75rem; opacity: 0.6; text-transform: uppercase;">Coins Collected</div>
+                        <div id="stat-coins" style="font-size: 1.3rem; color: #ffd700; font-weight: 700;">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div style="font-size: 0.75rem; opacity: 0.6; text-transform: uppercase;">Powerups Used</div>
+                        <div id="stat-powerups" style="font-size: 1.3rem; color: #00ff88; font-weight: 700;">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div style="font-size: 0.75rem; opacity: 0.6; text-transform: uppercase;">Obstacles Cleared</div>
+                        <div id="stat-obstacles" style="font-size: 1.3rem; color: #00f3ff; font-weight: 700;">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div style="font-size: 0.75rem; opacity: 0.6; text-transform: uppercase;">Time Played</div>
+                        <div id="stat-time" style="font-size: 1.3rem; color: #ff88ff; font-weight: 700;">0h 0m</div>
+                    </div>
+                    <div class="stat-item">
+                        <div style="font-size: 0.75rem; opacity: 0.6; text-transform: uppercase;">Distance (m)</div>
+                        <div id="stat-distance" style="font-size: 1.3rem; color: #88ffff; font-weight: 700;">0</div>
+                    </div>
+                </div>
+                <div id="cloud-sync-status" style="margin-top: 0.75rem; font-size: 0.75rem; opacity: 0.6; text-align: center;">
+                    <span id="sync-indicator">☁️</span> <span id="sync-text">Local Storage</span>
+                </div>
+
                 <button id="close-settings-btn" class="customize-button" style="margin-top: 2rem;">Close</button>
+            </div>
+
+            <!-- Create Account Modal (for new players) -->
+            <div id="create-account-modal" class="screen">
+                <h2>🎮 Welcome to JumpHop!</h2>
+                <p style="opacity: 0.7; margin-bottom: 1.5rem; font-size: 0.9rem;">Choose a username to get started</p>
+                <div style="display: flex; flex-direction: column; gap: 1rem; width: 100%; max-width: 300px;">
+                    <div>
+                        <label style="font-size: 0.85rem; opacity: 0.7; display: block; margin-bottom: 0.5rem; text-align: left;">Username (3-20 characters)</label>
+                        <input type="text" id="create-username" placeholder="Enter username" maxlength="20"
+                            style="padding: 12px; border-radius: 8px; border: 2px solid rgba(0,243,255,0.3); background: rgba(0,0,0,0.5); color: white; font-size: 1rem; text-align: center; width: 100%;">
+                    </div>
+                    <div id="create-error" style="color: #ff5555; font-size: 0.85rem; display: none;"></div>
+                    <div id="create-success" style="color: #00ff88; font-size: 0.85rem; display: none;"></div>
+                    <button id="create-account-btn" class="customize-button" style="margin-top: 1rem;">Create Account</button>
+                    <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <p style="font-size: 0.8rem; opacity: 0.5; margin-bottom: 0.5rem;">Already have an account?</p>
+                        <button id="create-switch-btn" class="customize-button" style="background: #444; width: 100%;">Login to Existing Account</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Password Modal --><div id="password-modal" class="screen">
+                <h2 id="password-modal-title">Set Password</h2>
+                <p style="opacity: 0.7; margin-bottom: 1.5rem; font-size: 0.9rem;">Protect your account with a password</p>
+                <div style="display: flex; flex-direction: column; gap: 1rem; width: 100%; max-width: 300px;">
+                    <div style="position: relative; width: 100%;">
+                        <input type="password" id="password-input" placeholder="Enter password (min 4 characters)"
+                            style="padding: 12px 45px 12px 12px; border-radius: 8px; border: 2px solid rgba(0,243,255,0.3); background: rgba(0,0,0,0.5); color: white; font-size: 1rem; text-align: center; width: 100%;">
+                        <button type="button" class="toggle-password" data-target="password-input" 
+                            style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: rgba(0,243,255,0.1); border: 1px solid rgba(0,243,255,0.3); border-radius: 4px; color: #00f3ff; cursor: pointer; font-size: 1.2rem; padding: 4px 8px; pointer-events: all;">👁️</button>
+                    </div>
+                    <div style="position: relative; width: 100%;">
+                        <input type="password" id="password-confirm" placeholder="Confirm password"
+                            style="padding: 12px 45px 12px 12px; border-radius: 8px; border: 2px solid rgba(0,243,255,0.3); background: rgba(0,0,0,0.5); color: white; font-size: 1rem; text-align: center; width: 100%;">
+                        <button type="button" class="toggle-password" data-target="password-confirm"
+                            style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: rgba(0,243,255,0.1); border: 1px solid rgba(0,243,255,0.3); border-radius: 4px; color: #00f3ff; cursor: pointer; font-size: 1.2rem; padding: 4px 8px; pointer-events: all;">👁️</button>
+                    </div>
+                    <div id="password-error" style="color: #ff5555; font-size: 0.85rem; display: none;"></div>
+                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                        <button id="password-cancel-btn" class="customize-button" style="flex: 1; background: #444;">Cancel</button>
+                        <button id="password-save-btn" class="customize-button" style="flex: 1;">Save</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Login Modal (for switching accounts with password) -->
+            <div id="login-modal" class="screen">
+                <h2>🔐 Login to Account</h2>
+                <p style="opacity: 0.7; margin-bottom: 1.5rem; font-size: 0.9rem;">This account is password protected</p>
+                <div style="display: flex; flex-direction: column; gap: 1rem; width: 100%; max-width: 300px;">
+                    <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;">
+                        <span style="opacity: 0.6;">Account ID:</span><br>
+                        <span id="login-account-id">...</span>
+                    </div>
+                    <div style="position: relative; width: 100%;">
+                        <input type="password" id="login-password-input" placeholder="Enter password"
+                            style="padding: 12px 45px 12px 12px; border-radius: 8px; border: 2px solid rgba(0,243,255,0.3); background: rgba(0,0,0,0.5); color: white; font-size: 1rem; text-align: center; width: 100%;">
+                        <button type="button" class="toggle-password" data-target="login-password-input"
+                            style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: rgba(0,243,255,0.1); border: 1px solid rgba(0,243,255,0.3); border-radius: 4px; color: #00f3ff; cursor: pointer; font-size: 1.2rem; padding: 4px 8px; pointer-events: all;">👁️</button>
+                    </div>
+                    <div id="login-error" style="color: #ff5555; font-size: 0.85rem; display: none;"></div>
+                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                        <button id="login-cancel-btn" class="customize-button" style="flex: 1; background: #444;">Cancel</button>
+                        <button id="login-submit-btn" class="customize-button" style="flex: 1;">Login</button>
+                    </div>
+                    <button id="forgot-password-btn" style="background: none; border: none; color: #00f3ff; cursor: pointer; font-size: 0.85rem; text-decoration: underline; pointer-events: all;">Forgot password? Use Recovery PIN</button>
+                </div>
+            </div>
+
+            <!-- PIN Recovery Modal -->
+            <div id="pin-recovery-modal" class="screen">
+                <h2>🔑 Account Recovery</h2>
+                <p style="opacity: 0.7; margin-bottom: 1.5rem; font-size: 0.9rem;">Enter your Recovery PIN to reset your password</p>
+                <div style="display: flex; flex-direction: column; gap: 1rem; width: 100%; max-width: 300px;">
+                    <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;">
+                        <span style="opacity: 0.6;">Account ID:</span><br>
+                        <span id="recovery-account-id">...</span>
+                    </div>
+                    <input type="password" id="recovery-pin-verify" placeholder="Enter PIN" maxlength="6"
+                        style="padding: 12px; border-radius: 8px; border: 2px solid rgba(0,243,255,0.3); background: rgba(0,0,0,0.5); color: white; font-size: 1.2rem; text-align: center; letter-spacing: 8px;">
+                    <div id="recovery-error" style="color: #ff5555; font-size: 0.85rem; display: none;"></div>
+                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                        <button id="recovery-cancel-btn" class="customize-button" style="flex: 1; background: #444;">Cancel</button>
+                        <button id="recovery-verify-btn" class="customize-button" style="flex: 1;">Verify PIN</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reset Password Modal (after PIN verified) -->
+            <div id="reset-password-modal" class="screen">
+                <h2>🔐 Set New Password</h2>
+                <p style="opacity: 0.7; margin-bottom: 1.5rem; font-size: 0.9rem;">PIN verified! Create a new password</p>
+                <div style="display: flex; flex-direction: column; gap: 1rem; width: 100%; max-width: 300px;">
+                    <div style="position: relative; width: 100%;">
+                        <input type="password" id="reset-password-input" placeholder="New password (min 4 characters)"
+                            style="padding: 12px 45px 12px 12px; border-radius: 8px; border: 2px solid rgba(0,243,255,0.3); background: rgba(0,0,0,0.5); color: white; font-size: 1rem; text-align: center; width: 100%;">
+                        <button type="button" class="toggle-password" data-target="reset-password-input" 
+                            style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: rgba(0,243,255,0.1); border: 1px solid rgba(0,243,255,0.3); border-radius: 4px; color: #00f3ff; cursor: pointer; font-size: 1.2rem; padding: 4px 8px; pointer-events: all;">👁️</button>
+                    </div>
+                    <div style="position: relative; width: 100%;">
+                        <input type="password" id="reset-password-confirm" placeholder="Confirm new password"
+                            style="padding: 12px 45px 12px 12px; border-radius: 8px; border: 2px solid rgba(0,243,255,0.3); background: rgba(0,0,0,0.5); color: white; font-size: 1rem; text-align: center; width: 100%;">
+                        <button type="button" class="toggle-password" data-target="reset-password-confirm"
+                            style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: rgba(0,243,255,0.1); border: 1px solid rgba(0,243,255,0.3); border-radius: 4px; color: #00f3ff; cursor: pointer; font-size: 1.2rem; padding: 4px 8px; pointer-events: all;">👁️</button>
+                    </div>
+                    <div id="reset-error" style="color: #ff5555; font-size: 0.85rem; display: none;"></div>
+                    <button id="reset-save-btn" class="customize-button" style="margin-top: 1rem;">Save New Password</button>
+                </div>
+            </div>
+
+            <!-- Switch Account Modal -->
+            <div id="switch-account-modal" class="screen">
+                <h2>🔄 Switch Account</h2>
+                <p style="opacity: 0.7; margin-bottom: 1.5rem; font-size: 0.9rem;">Enter your account credentials</p>
+                <div style="display: flex; flex-direction: column; gap: 1rem; width: 100%; max-width: 300px;">
+                    <div>
+                        <label style="font-size: 0.85rem; opacity: 0.7; display: block; margin-bottom: 0.5rem; text-align: left;">Account ID</label>
+                        <input type="text" id="switch-account-id" placeholder="Enter Account ID"
+                            style="padding: 12px; border-radius: 8px; border: 2px solid rgba(0,243,255,0.3); background: rgba(0,0,0,0.5); color: white; font-size: 1rem; text-align: center; width: 100%; font-family: monospace;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.85rem; opacity: 0.7; display: block; margin-bottom: 0.5rem; text-align: left;">Password</label>
+                        <div style="position: relative; width: 100%;">
+                            <input type="password" id="switch-password-input" placeholder="Enter password"
+                                style="padding: 12px 45px 12px 12px; border-radius: 8px; border: 2px solid rgba(0,243,255,0.3); background: rgba(0,0,0,0.5); color: white; font-size: 1rem; text-align: center; width: 100%;">
+                            <button type="button" class="toggle-password" data-target="switch-password-input"
+                                style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: rgba(0,243,255,0.1); border: 1px solid rgba(0,243,255,0.3); border-radius: 4px; color: #00f3ff; cursor: pointer; font-size: 1.2rem; padding: 4px 8px; pointer-events: all;">👁️</button>
+                        </div>
+                    </div>
+                    <div id="switch-error" style="color: #ff5555; font-size: 0.85rem; display: none;"></div>
+                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                        <button id="switch-cancel-btn" class="customize-button" style="flex: 1; background: #444;">Cancel</button>
+                        <button id="switch-login-btn" class="customize-button" style="flex: 1;">Login</button>
+                    </div>
+                    <button id="switch-forgot-btn" style="background: none; border: none; color: #00f3ff; cursor: pointer; font-size: 0.85rem; text-decoration: underline; pointer-events: all;">Forgot password?</button>
+                    <p style="font-size: 0.75rem; opacity: 0.4; margin-top: 0.5rem;">Accounts without a password can be accessed with just the ID</p>
+                </div>
             </div>
 
             <div id="level-select-screen" class="screen level-select-screen active">
@@ -166,6 +362,46 @@
                                 <div class="level-number">20</div>
                                 <div class="level-name">Transcendence</div>
                             </button>
+                            <button class="level-btn locked" data-level="21">
+                                <div class="level-number">21</div>
+                                <div class="level-name">Singularity</div>
+                            </button>
+                            <button class="level-btn locked" data-level="22">
+                                <div class="level-number">22</div>
+                                <div class="level-name">Paradox</div>
+                            </button>
+                            <button class="level-btn locked" data-level="23">
+                                <div class="level-number">23</div>
+                                <div class="level-name">Vortex</div>
+                            </button>
+                            <button class="level-btn locked" data-level="24">
+                                <div class="level-number">24</div>
+                                <div class="level-name">Eclipse</div>
+                            </button>
+                            <button class="level-btn locked" data-level="25">
+                                <div class="level-number">25</div>
+                                <div class="level-name">Supernova</div>
+                            </button>
+                            <button class="level-btn locked" data-level="26">
+                                <div class="level-number">26</div>
+                                <div class="level-name">Quantum</div>
+                            </button>
+                            <button class="level-btn locked" data-level="27">
+                                <div class="level-number">27</div>
+                                <div class="level-name">Eternity</div>
+                            </button>
+                            <button class="level-btn locked" data-level="28">
+                                <div class="level-number">28</div>
+                                <div class="level-name">Ragnarok</div>
+                            </button>
+                            <button class="level-btn locked" data-level="29">
+                                <div class="level-number">29</div>
+                                <div class="level-name">Godslayer</div>
+                            </button>
+                            <button class="level-btn locked" data-level="30">
+                                <div class="level-number">30</div>
+                                <div class="level-name">Ascension</div>
+                            </button>
                         </div>
                     </div>
                     
@@ -187,9 +423,6 @@
                     </div>
                 </div>
                 
-                <div class="level-select-footer">
-                    <button id="customize-btn" class="customize-button">Cosmetics</button>
-                </div>
                 <p class="back-hint">JumpHop v1.0</p>
             </div>
 
@@ -224,18 +457,21 @@
             <div id="level-complete-screen" class="screen">
                 <h2>LEVEL COMPLETE!</h2>
                 <p id="level-complete-message">Great job!</p>
-                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-                    <button id="win-next-btn" class="customize-button">Continue</button>
-                    <button id="win-menu-btn" class="customize-button" style="background: #444;">Menu</button>
-                </div>
+                <button id="win-menu-btn" class="customize-button" style="margin-top: 2rem;">Back to Menu</button>
             </div>
 
             <div id="customize-screen" class="screen customize-screen">
                 <div class="customize-header">
                     <h2>CUSTOMIZE</h2>
-                    <div class="coin-display">
-                        <span class="coin-icon">🪙</span>
-                        <span id="customize-coin-count">0</span>
+                    <div class="currency-displays">
+                        <div class="coin-display">
+                            <span class="coin-icon">🪙</span>
+                            <span id="customize-coin-count">0</span>
+                        </div>
+                        <div class="hops-display">
+                            <span class="hops-icon">💎</span>
+                            <span id="customize-hops-count">0</span>
+                        </div>
                     </div>
                 </div>
                 
@@ -244,6 +480,7 @@
                         <div class="preview-label">PREVIEW</div>
                         <canvas id="preview-canvas" width="220" height="220"></canvas>
                         <div class="preview-glow"></div>
+                        <div id="preview-ability" class="preview-ability" style="display: none;"></div>
                     </div>
                     
                     <div class="shop-panel">
@@ -253,9 +490,12 @@
                                 <h3>Colors</h3>
                             </div>
                             <div class="color-presets"></div>
-                            <div class="custom-color-picker">
+                            <div class="custom-color-picker" id="custom-color-container">
                                 <label for="color-input">Custom Color</label>
-                                <input type="color" id="color-input" value="#00f3ff">
+                                <div class="custom-color-right">
+                                    <input type="color" id="color-input" value="#00f3ff">
+                                    <button id="unlock-custom-color-btn" class="unlock-btn" style="display: none;">🔒 5,000</button>
+                                </div>
                             </div>
                         </div>
                         
@@ -274,6 +514,16 @@
                             </div>
                             <div class="background-grid"></div>
                         </div>
+                        
+                        <div class="shop-section skins-section">
+                            <div class="section-header">
+                                <span class="section-icon">🎭</span>
+                                <h3>Character Skins</h3>
+                                <span class="dlc-badge">DLC</span>
+                            </div>
+                            <p class="skins-desc">Replace your cube with custom character sprites!</p>
+                            <div class="skins-grid"></div>
+                        </div>
                     </div>
                 </div>
                 
@@ -285,8 +535,57 @@
                         <span>👁️</span> Preview
                     </button>
                     <button id="cust-unlock-btn" class="unlock-button" style="display: none;">
-                        <span>🔓</span> Unlock for <span id="unlock-price">0</span> 🪙
+                        <span>🔓</span> <span class="unlock-text">UNLOCK</span> <span id="unlock-price">0</span> 🪙
                     </button>
+                </div>
+            </div>
+            
+            <!-- Rewards Screen -->
+            <div id="rewards-screen" class="screen rewards-screen">
+                <div class="rewards-header">
+                    <h2>📈 LEVEL REWARDS</h2>
+                    <div class="rewards-header-info">
+                        <div class="rewards-level-box">Level <span id="rewards-level">1</span></div>
+                        <div class="rewards-xp-container">
+                            <div class="rewards-xp-bar">
+                                <div class="rewards-xp-fill" id="rewards-xp-fill"></div>
+                            </div>
+                            <span class="rewards-xp-text" id="rewards-xp-text">0 / 1000 XP</span>
+                        </div>
+                        <div class="rewards-currencies">
+                            <span class="rewards-currency">🪙 <span id="rewards-coins">0</span></span>
+                            <span class="rewards-currency hops">💎 <span id="rewards-hops">0</span></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="rewards-tracks">
+                    <!-- Free Track -->
+                    <div class="rewards-track free-track">
+                        <div class="track-header">🎁 FREE REWARDS</div>
+                        <div class="track-scroll-container">
+                            <div class="track-items" id="free-rewards-grid"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- VIP Track -->
+                    <div class="rewards-track vip-track">
+                        <div class="track-header">
+                            <span>✨ VIP REWARDS</span>
+                            <div class="vip-buttons">
+                                <button id="unlock-vip-btn" class="vip-unlock-btn">Unlock 💎500</button>
+                                <button id="unlock-vip-coins-btn" class="vip-unlock-btn coins-btn">Unlock 🪙20,000</button>
+                            </div>
+                        </div>
+                        <div class="track-scroll-container">
+                            <div class="track-items" id="vip-rewards-grid"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="rewards-footer">
+                    <button id="rewards-back-btn" class="back-button"><span>←</span> Back to Menu</button>
+                    <p class="rewards-hint">💡 Earn XP by collecting coins and completing levels!</p>
                 </div>
             </div>
             
@@ -304,6 +603,9 @@
 
             <div id="current-level-display">LEVEL <span id="current-level-num">1</span></div>
             <div id="heart-container"></div>
+            
+            <!-- Toast Notification Container -->
+            <div id="toast-container"></div>
         </div>
         <canvas id="game-canvas"></canvas>
     </div>

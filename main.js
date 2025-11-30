@@ -216,52 +216,52 @@ let coinsCollectedThisRun = 0; // Track coins earned in current game
 
 // Level configurations
 const LEVELS = {
-    // Quest Levels 1-10 (Balanced progression) - lengths reduced 18%
-    1: { name: 'Beginner', length: 6035, startSpeed: 6, maxSpeed: 8, spawnRate: 0.035, minDistance: 550, difficulty: 1 },
-    2: { name: 'Easy', length: 8300, startSpeed: 6.5, maxSpeed: 9, spawnRate: 0.04, minDistance: 500, difficulty: 1 },
-    3: { name: 'Medium', length: 10560, startSpeed: 7, maxSpeed: 10, spawnRate: 0.05, minDistance: 450, difficulty: 2 },
-    4: { name: 'Hard', length: 12825, startSpeed: 7.5, maxSpeed: 11, spawnRate: 0.055, minDistance: 420, difficulty: 2 },
-    5: { name: 'Expert', length: 15090, startSpeed: 8, maxSpeed: 12, spawnRate: 0.06, minDistance: 400, difficulty: 3 },
-    6: { name: 'Insane', length: 18105, startSpeed: 8.5, maxSpeed: 13, spawnRate: 0.07, minDistance: 380, difficulty: 4 },
-    7: { name: 'Demon', length: 21125, startSpeed: 9, maxSpeed: 14, spawnRate: 0.08, minDistance: 350, difficulty: 5 },
-    8: { name: 'Void', length: 24140, startSpeed: 9.5, maxSpeed: 15, spawnRate: 0.09, minDistance: 320, difficulty: 6 },
-    9: { name: 'Omega', length: 28670, startSpeed: 10, maxSpeed: 16, spawnRate: 0.10, minDistance: 300, difficulty: 7 },
-    10: { name: 'Infinity', length: 33950, startSpeed: 11, maxSpeed: 17, spawnRate: 0.12, minDistance: 280, difficulty: 8 },
-    // Quest Levels 11-20 (Medium-hard) - lengths reduced 18%
-    11: { name: 'Abyss', length: 37720, startSpeed: 11.5, maxSpeed: 18, spawnRate: 0.14, minDistance: 260, difficulty: 9 },
-    12: { name: 'Chaos', length: 41490, startSpeed: 12, maxSpeed: 19, spawnRate: 0.15, minDistance: 250, difficulty: 10 },
-    13: { name: 'Nightmare', length: 45265, startSpeed: 12.5, maxSpeed: 20, spawnRate: 0.16, minDistance: 240, difficulty: 11 },
-    14: { name: 'Oblivion', length: 49035, startSpeed: 13, maxSpeed: 21, spawnRate: 0.18, minDistance: 230, difficulty: 12 },
-    15: { name: 'Cataclysm', length: 52810, startSpeed: 13.5, maxSpeed: 22, spawnRate: 0.19, minDistance: 220, difficulty: 13 },
-    16: { name: 'Apocalypse', length: 57335, startSpeed: 14, maxSpeed: 23, spawnRate: 0.21, minDistance: 210, difficulty: 14 },
-    17: { name: 'Armageddon', length: 61860, startSpeed: 14.5, maxSpeed: 24, spawnRate: 0.22, minDistance: 200, difficulty: 15 },
-    18: { name: 'Extinction', length: 66385, startSpeed: 15, maxSpeed: 25, spawnRate: 0.24, minDistance: 190, difficulty: 16 },
-    19: { name: 'Annihilation', length: 71670, startSpeed: 15.5, maxSpeed: 26, spawnRate: 0.25, minDistance: 180, difficulty: 17 },
-    20: { name: 'Transcendence', length: 79210, startSpeed: 16, maxSpeed: 27, spawnRate: 0.27, minDistance: 170, difficulty: 18 },
-    // Quest Levels 21-30 (Ultimate Challenge) - lengths reduced 18%
-    21: { name: 'Singularity', length: 98070, startSpeed: 21, maxSpeed: 30, spawnRate: 0.32, minDistance: 110, difficulty: 21 },
-    22: { name: 'Paradox', length: 105615, startSpeed: 22, maxSpeed: 31, spawnRate: 0.33, minDistance: 108, difficulty: 22 },
-    23: { name: 'Vortex', length: 113160, startSpeed: 22, maxSpeed: 32, spawnRate: 0.34, minDistance: 105, difficulty: 23 },
-    24: { name: 'Eclipse', length: 120705, startSpeed: 23, maxSpeed: 33, spawnRate: 0.35, minDistance: 102, difficulty: 24 },
-    25: { name: 'Supernova', length: 132020, startSpeed: 23, maxSpeed: 34, spawnRate: 0.36, minDistance: 100, difficulty: 25 },
-    26: { name: 'Quantum', length: 143335, startSpeed: 24, maxSpeed: 35, spawnRate: 0.37, minDistance: 98, difficulty: 26 },
-    27: { name: 'Eternity', length: 158425, startSpeed: 24, maxSpeed: 36, spawnRate: 0.38, minDistance: 95, difficulty: 27 },
-    28: { name: 'Ragnarok', length: 173510, startSpeed: 25, maxSpeed: 37, spawnRate: 0.39, minDistance: 92, difficulty: 28 },
-    29: { name: 'Godslayer', length: 188600, startSpeed: 25, maxSpeed: 38, spawnRate: 0.40, minDistance: 90, difficulty: 29 },
-    30: { name: 'Ascension', length: 211230, startSpeed: 26, maxSpeed: 40, spawnRate: 0.42, minDistance: 88, difficulty: 30 }
+    // Quest Levels 1-10 (minDistance +17% for more spacing)
+    1: { name: 'Beginner', length: 6035, startSpeed: 5, maxSpeed: 7, spawnRate: 0.035, minDistance: 644, difficulty: 1 },
+    2: { name: 'Easy', length: 8300, startSpeed: 5.5, maxSpeed: 8, spawnRate: 0.04, minDistance: 585, difficulty: 1 },
+    3: { name: 'Medium', length: 10560, startSpeed: 6, maxSpeed: 9, spawnRate: 0.05, minDistance: 527, difficulty: 2 },
+    4: { name: 'Hard', length: 12825, startSpeed: 6.5, maxSpeed: 10, spawnRate: 0.055, minDistance: 491, difficulty: 2 },
+    5: { name: 'Expert', length: 15090, startSpeed: 7, maxSpeed: 11, spawnRate: 0.06, minDistance: 468, difficulty: 3 },
+    6: { name: 'Insane', length: 18105, startSpeed: 7.5, maxSpeed: 12, spawnRate: 0.07, minDistance: 445, difficulty: 4 },
+    7: { name: 'Demon', length: 21125, startSpeed: 8, maxSpeed: 13, spawnRate: 0.08, minDistance: 410, difficulty: 5 },
+    8: { name: 'Void', length: 24140, startSpeed: 8.5, maxSpeed: 14, spawnRate: 0.09, minDistance: 374, difficulty: 6 },
+    9: { name: 'Omega', length: 28670, startSpeed: 9, maxSpeed: 15, spawnRate: 0.10, minDistance: 351, difficulty: 7 },
+    10: { name: 'Infinity', length: 33950, startSpeed: 9.5, maxSpeed: 16, spawnRate: 0.12, minDistance: 328, difficulty: 8 },
+    // Quest Levels 11-20 (minDistance +17% for more spacing)
+    11: { name: 'Abyss', length: 37720, startSpeed: 10, maxSpeed: 17, spawnRate: 0.14, minDistance: 304, difficulty: 9 },
+    12: { name: 'Chaos', length: 41490, startSpeed: 10.5, maxSpeed: 18, spawnRate: 0.15, minDistance: 293, difficulty: 10 },
+    13: { name: 'Nightmare', length: 45265, startSpeed: 11, maxSpeed: 19, spawnRate: 0.16, minDistance: 281, difficulty: 11 },
+    14: { name: 'Oblivion', length: 49035, startSpeed: 11.5, maxSpeed: 20, spawnRate: 0.18, minDistance: 269, difficulty: 12 },
+    15: { name: 'Cataclysm', length: 52810, startSpeed: 12, maxSpeed: 21, spawnRate: 0.19, minDistance: 257, difficulty: 13 },
+    16: { name: 'Apocalypse', length: 57335, startSpeed: 12.5, maxSpeed: 22, spawnRate: 0.21, minDistance: 246, difficulty: 14 },
+    17: { name: 'Armageddon', length: 61860, startSpeed: 13, maxSpeed: 23, spawnRate: 0.22, minDistance: 234, difficulty: 15 },
+    18: { name: 'Extinction', length: 66385, startSpeed: 13.5, maxSpeed: 24, spawnRate: 0.24, minDistance: 222, difficulty: 16 },
+    19: { name: 'Annihilation', length: 71670, startSpeed: 14, maxSpeed: 25, spawnRate: 0.25, minDistance: 211, difficulty: 17 },
+    20: { name: 'Transcendence', length: 79210, startSpeed: 14.5, maxSpeed: 26, spawnRate: 0.27, minDistance: 199, difficulty: 18 },
+    // Quest Levels 21-30 (minDistance +17% for more spacing)
+    21: { name: 'Singularity', length: 98070, startSpeed: 18, maxSpeed: 28, spawnRate: 0.32, minDistance: 129, difficulty: 21 },
+    22: { name: 'Paradox', length: 105615, startSpeed: 18.5, maxSpeed: 29, spawnRate: 0.33, minDistance: 126, difficulty: 22 },
+    23: { name: 'Vortex', length: 113160, startSpeed: 19, maxSpeed: 30, spawnRate: 0.34, minDistance: 123, difficulty: 23 },
+    24: { name: 'Eclipse', length: 120705, startSpeed: 19.5, maxSpeed: 31, spawnRate: 0.35, minDistance: 119, difficulty: 24 },
+    25: { name: 'Supernova', length: 132020, startSpeed: 20, maxSpeed: 32, spawnRate: 0.36, minDistance: 117, difficulty: 25 },
+    26: { name: 'Quantum', length: 143335, startSpeed: 20.5, maxSpeed: 33, spawnRate: 0.37, minDistance: 115, difficulty: 26 },
+    27: { name: 'Eternity', length: 158425, startSpeed: 21, maxSpeed: 34, spawnRate: 0.38, minDistance: 111, difficulty: 27 },
+    28: { name: 'Ragnarok', length: 173510, startSpeed: 21.5, maxSpeed: 35, spawnRate: 0.39, minDistance: 108, difficulty: 28 },
+    29: { name: 'Godslayer', length: 188600, startSpeed: 22, maxSpeed: 36, spawnRate: 0.40, minDistance: 105, difficulty: 29 },
+    30: { name: 'Ascension', length: 211230, startSpeed: 22.5, maxSpeed: 38, spawnRate: 0.42, minDistance: 103, difficulty: 30 }
 };
 
 // Unlimited Mode Configuration
 const UNLIMITED_MODE = {
     name: 'Unlimited',
-    startSpeed: 9,          // Increased starting speed
-    maxSpeed: 22,           // Capped max speed for unlimited (still very fast)
-    hardcoreMaxSpeed: 30,   // Hardcore keeps the higher max
-    scaleDistance: 150000,  // Slower scaling - takes longer to reach max
-    spawnRate: 0.07,        // Increased spawn rate
-    minDistance: 350,       // Reduced min distance for more action
+    startSpeed: 7,          // Nerfed starting speed
+    maxSpeed: 20,           // Reduced max speed
+    hardcoreMaxSpeed: 28,   // Hardcore max also reduced
+    scaleDistance: 180000,  // Even slower scaling - takes longer to reach max
+    spawnRate: 0.07,        // Spawn rate unchanged
+    minDistance: 410,       // Min distance +17%
     difficulty: 1, // Starts easy but ramps up
-    speedRampRate: 0.0003 // How fast difficulty increases over time
+    speedRampRate: 0.00025 // Slower speed ramp rate
 };
 
 let isUnlimitedMode = false;

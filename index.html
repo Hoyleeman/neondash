@@ -84,6 +84,15 @@
                             style="padding: 5px 10px; min-width: auto;">Copy</button>
                     </div>
                 </div>
+                <div class="setting-item" id="change-name-section" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
+                    <label style="font-size: 0.9rem; opacity: 0.7;">Change Username (one-time):</label>
+                    <div style="display: flex; gap: 10px; width: 100%;">
+                        <input type="text" id="new-username-input" placeholder="Enter new username" maxlength="20"
+                            style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white; font-size: 0.9rem;">
+                        <button id="change-username-btn" class="setting-btn" style="padding: 5px 12px; background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000;">Change</button>
+                    </div>
+                    <p id="change-name-hint" style="font-size: 0.75rem; opacity: 0.5; margin-top: 0.25rem;">⚠️ You can only change your name once!</p>
+                </div>
                 <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
                     <label style="font-size: 0.9rem; opacity: 0.7;">Account Security:</label>
                     <div id="password-status" style="font-size: 0.85rem; color: #ff5555;">🔓 No password set</div>
@@ -419,6 +428,7 @@
                                 <div class="level-name">Hardcore</div>
                             </button>
                         </div>
+                        <button id="leaderboard-btn" class="leaderboard-btn">🏅 Leaderboard</button>
                         <p class="hardcore-desc">Hardcore: No powerups. No coins. Pure skill.</p>
                     </div>
                 </div>
@@ -608,6 +618,33 @@
             <div id="toast-container"></div>
         </div>
         <canvas id="game-canvas"></canvas>
+        
+        <!-- Leaderboard Modal -->
+        <div id="leaderboard-modal" class="modal-overlay" style="display: none;">
+            <div class="leaderboard-container">
+                <div class="leaderboard-header">
+                    <h2>🏆 UNLIMITED MODE LEADERBOARD</h2>
+                    <button id="leaderboard-close-btn" class="close-btn">✕</button>
+                </div>
+                <div class="leaderboard-tabs">
+                    <button class="lb-tab active" data-mode="unlimited">∞ Unlimited</button>
+                    <button class="lb-tab" data-mode="hardcore">💀 Hardcore</button>
+                </div>
+                <div id="leaderboard-content" class="leaderboard-content">
+                    <div class="leaderboard-loading">Loading...</div>
+                </div>
+                <div class="leaderboard-footer">
+                    <div class="your-best">
+                        <span>Your Best:</span>
+                        <span id="your-best-score">0</span>
+                    </div>
+                    <div class="your-rank">
+                        <span>Your Rank:</span>
+                        <span id="your-rank">#--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     <script src="./main.js"></script>
 </body>

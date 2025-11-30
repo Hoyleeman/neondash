@@ -79,16 +79,19 @@ class ObjectPool {
 
 // Performance settings - adjust based on device capability
 const perfSettings = {
-    maxParticles: 80,            // Reduced particle limit for smoother performance
-    maxCubeFragments: 30,        // Reduced fragments
+    maxParticles: 60,            // Reduced particle limit for smoother performance
+    maxCubeFragments: 20,        // Reduced fragments
     shadowsEnabled: true,        // Can be toggled in settings
     particlesEnabled: true,      // Can be toggled in settings
-    reducedShadowBlur: 4,        // Lower shadow blur for performance
+    reducedShadowBlur: 3,        // Lower shadow blur for performance
     skipBackgroundDetails: false, // Skip expensive background elements
     frameSkipThreshold: 2.0,     // Skip frames if delta > this (falling behind)
     useObjectPooling: true,      // Reuse objects instead of creating new ones
     batchRendering: true,        // Batch similar draw calls
-    throttleParticleSpawn: 0.7,  // Reduce particle spawn rate
+    throttleParticleSpawn: 0.5,  // Reduce particle spawn rate
+    simplifyBackgrounds: false,  // Use simplified background rendering
+    maxStars: 50,                // Limit stars in backgrounds
+    maxAuroraWaves: 2,           // Limit aurora waves
 };
 
 
@@ -138,28 +141,49 @@ function detectPerformanceLevel() {
     // Check for medium-end devices
     const isMedium = navigator.hardwareConcurrency <= 4;
     
+    // Check screen size - larger screens need more optimization
+    const isLargeScreen = window.innerWidth > 1920 || window.innerHeight > 1080;
+    const isFullscreen = document.fullscreenElement || window.innerHeight >= screen.height - 100;
+    
     if (isLowEnd) {
-        perfSettings.maxParticles = 40;
-        perfSettings.maxCubeFragments = 15;
-        perfSettings.reducedShadowBlur = 2;
+        perfSettings.maxParticles = 25;
+        perfSettings.maxCubeFragments = 8;
+        perfSettings.reducedShadowBlur = 0;
         perfSettings.skipBackgroundDetails = true;
         perfSettings.shadowsEnabled = false;
+        perfSettings.throttleParticleSpawn = 0.25;
+        perfSettings.simplifyBackgrounds = true;
+        perfSettings.maxStars = 15;
+        perfSettings.maxAuroraWaves = 1;
+        console.log('🔧 Low-end device detected - using minimal graphics');
+    } else if (isMedium || isLargeScreen || isFullscreen) {
+        perfSettings.maxParticles = 40;
+        perfSettings.maxCubeFragments = 12;
+        perfSettings.reducedShadowBlur = 2;
         perfSettings.throttleParticleSpawn = 0.4;
-        console.log('🔧 Low-end device detected - using reduced graphics');
-    } else if (isMedium) {
-        perfSettings.maxParticles = 60;
-        perfSettings.maxCubeFragments = 25;
-        perfSettings.reducedShadowBlur = 3;
-        perfSettings.throttleParticleSpawn = 0.6;
-        console.log('🔧 Medium device detected - using balanced graphics');
-    }
-    
-    // Check for high refresh rate displays - don't increase particles, just note it
-    if (window.screen && window.screen.availWidth > 1920) {
-        console.log('🔧 High-res display detected');
+        perfSettings.simplifyBackgrounds = isLargeScreen || isFullscreen;
+        perfSettings.maxStars = 30;
+        perfSettings.maxAuroraWaves = 2;
+        console.log('🔧 Optimized graphics for smooth performance');
+    } else {
+        // High-end device - use full graphics
+        perfSettings.simplifyBackgrounds = false;
+        perfSettings.maxStars = 50;
+        perfSettings.maxAuroraWaves = 3;
     }
 }
 detectPerformanceLevel();
+
+// Re-detect on fullscreen change for smooth performance
+document.addEventListener('fullscreenchange', () => {
+    detectPerformanceLevel();
+    clearGradientCache();
+});
+window.addEventListener('resize', () => {
+    // Debounce resize detection
+    clearTimeout(window.resizePerformanceTimeout);
+    window.resizePerformanceTimeout = setTimeout(detectPerformanceLevel, 200);
+});
 
 // Frame timing for smooth animations
 let frameTimes = [];
@@ -195,50 +219,50 @@ let coinsCollectedThisRun = 0; // Track coins earned in current game
 
 // Level configurations
 const LEVELS = {
-    // Quest Levels 1-10 (Original)
-    1: { name: 'Beginner', length: 10000, startSpeed: 6, maxSpeed: 9, spawnRate: 0.03, minDistance: 500, difficulty: 1 },
-    2: { name: 'Easy', length: 14000, startSpeed: 7, maxSpeed: 10, spawnRate: 0.04, minDistance: 450, difficulty: 2 },
-    3: { name: 'Medium', length: 18000, startSpeed: 8, maxSpeed: 11, spawnRate: 0.05, minDistance: 400, difficulty: 3 },
-    4: { name: 'Hard', length: 22000, startSpeed: 9, maxSpeed: 12, spawnRate: 0.06, minDistance: 350, difficulty: 4 },
-    5: { name: 'Expert', length: 26000, startSpeed: 10, maxSpeed: 13, spawnRate: 0.07, minDistance: 300, difficulty: 5 },
-    6: { name: 'Insane', length: 30000, startSpeed: 11, maxSpeed: 14, spawnRate: 0.08, minDistance: 280, difficulty: 6 },
-    7: { name: 'Demon', length: 35000, startSpeed: 12, maxSpeed: 15, spawnRate: 0.09, minDistance: 260, difficulty: 7 },
-    8: { name: 'Void', length: 40000, startSpeed: 13, maxSpeed: 16, spawnRate: 0.12, minDistance: 220, difficulty: 8 },
-    9: { name: 'Omega', length: 50000, startSpeed: 14, maxSpeed: 17, spawnRate: 0.14, minDistance: 200, difficulty: 9 },
-    10: { name: 'Infinity', length: 60000, startSpeed: 15, maxSpeed: 18, spawnRate: 0.16, minDistance: 180, difficulty: 10 },
-    // Quest Levels 11-20 (New)
-    11: { name: 'Abyss', length: 65000, startSpeed: 15, maxSpeed: 19, spawnRate: 0.17, minDistance: 170, difficulty: 11 },
-    12: { name: 'Chaos', length: 70000, startSpeed: 16, maxSpeed: 20, spawnRate: 0.18, minDistance: 160, difficulty: 12 },
-    13: { name: 'Nightmare', length: 75000, startSpeed: 16, maxSpeed: 21, spawnRate: 0.19, minDistance: 150, difficulty: 13 },
-    14: { name: 'Oblivion', length: 80000, startSpeed: 17, maxSpeed: 22, spawnRate: 0.20, minDistance: 145, difficulty: 14 },
-    15: { name: 'Cataclysm', length: 85000, startSpeed: 17, maxSpeed: 23, spawnRate: 0.21, minDistance: 140, difficulty: 15 },
-    16: { name: 'Apocalypse', length: 90000, startSpeed: 18, maxSpeed: 24, spawnRate: 0.22, minDistance: 135, difficulty: 16 },
-    17: { name: 'Armageddon', length: 95000, startSpeed: 18, maxSpeed: 25, spawnRate: 0.23, minDistance: 130, difficulty: 17 },
-    18: { name: 'Extinction', length: 100000, startSpeed: 19, maxSpeed: 26, spawnRate: 0.24, minDistance: 125, difficulty: 18 },
-    19: { name: 'Annihilation', length: 110000, startSpeed: 19, maxSpeed: 27, spawnRate: 0.25, minDistance: 120, difficulty: 19 },
-    20: { name: 'Transcendence', length: 120000, startSpeed: 20, maxSpeed: 28, spawnRate: 0.26, minDistance: 115, difficulty: 20 },
-    // Quest Levels 21-30 (Ultimate Challenge)
-    21: { name: 'Singularity', length: 130000, startSpeed: 20, maxSpeed: 29, spawnRate: 0.27, minDistance: 112, difficulty: 21 },
-    22: { name: 'Paradox', length: 140000, startSpeed: 21, maxSpeed: 30, spawnRate: 0.28, minDistance: 110, difficulty: 22 },
-    23: { name: 'Vortex', length: 150000, startSpeed: 21, maxSpeed: 31, spawnRate: 0.29, minDistance: 108, difficulty: 23 },
-    24: { name: 'Eclipse', length: 160000, startSpeed: 22, maxSpeed: 32, spawnRate: 0.30, minDistance: 105, difficulty: 24 },
-    25: { name: 'Supernova', length: 175000, startSpeed: 22, maxSpeed: 33, spawnRate: 0.31, minDistance: 102, difficulty: 25 },
-    26: { name: 'Quantum', length: 190000, startSpeed: 23, maxSpeed: 34, spawnRate: 0.32, minDistance: 100, difficulty: 26 },
-    27: { name: 'Eternity', length: 210000, startSpeed: 23, maxSpeed: 35, spawnRate: 0.33, minDistance: 98, difficulty: 27 },
-    28: { name: 'Ragnarok', length: 230000, startSpeed: 24, maxSpeed: 36, spawnRate: 0.34, minDistance: 95, difficulty: 28 },
-    29: { name: 'Godslayer', length: 250000, startSpeed: 24, maxSpeed: 37, spawnRate: 0.35, minDistance: 92, difficulty: 29 },
-    30: { name: 'Ascension', length: 280000, startSpeed: 25, maxSpeed: 38, spawnRate: 0.36, minDistance: 90, difficulty: 30 }
+    // Quest Levels 1-10 (Balanced progression) - lengths reduced 8%
+    1: { name: 'Beginner', length: 7360, startSpeed: 6, maxSpeed: 8, spawnRate: 0.035, minDistance: 550, difficulty: 1 },
+    2: { name: 'Easy', length: 10120, startSpeed: 6.5, maxSpeed: 9, spawnRate: 0.04, minDistance: 500, difficulty: 1 },
+    3: { name: 'Medium', length: 12880, startSpeed: 7, maxSpeed: 10, spawnRate: 0.05, minDistance: 450, difficulty: 2 },
+    4: { name: 'Hard', length: 15640, startSpeed: 7.5, maxSpeed: 11, spawnRate: 0.055, minDistance: 420, difficulty: 2 },
+    5: { name: 'Expert', length: 18400, startSpeed: 8, maxSpeed: 12, spawnRate: 0.06, minDistance: 400, difficulty: 3 },
+    6: { name: 'Insane', length: 22080, startSpeed: 8.5, maxSpeed: 13, spawnRate: 0.07, minDistance: 380, difficulty: 4 },
+    7: { name: 'Demon', length: 25760, startSpeed: 9, maxSpeed: 14, spawnRate: 0.08, minDistance: 350, difficulty: 5 },
+    8: { name: 'Void', length: 29440, startSpeed: 9.5, maxSpeed: 15, spawnRate: 0.09, minDistance: 320, difficulty: 6 },
+    9: { name: 'Omega', length: 34960, startSpeed: 10, maxSpeed: 16, spawnRate: 0.10, minDistance: 300, difficulty: 7 },
+    10: { name: 'Infinity', length: 41400, startSpeed: 11, maxSpeed: 17, spawnRate: 0.12, minDistance: 280, difficulty: 8 },
+    // Quest Levels 11-20 (Medium-hard) - lengths reduced 8%
+    11: { name: 'Abyss', length: 46000, startSpeed: 11.5, maxSpeed: 18, spawnRate: 0.14, minDistance: 260, difficulty: 9 },
+    12: { name: 'Chaos', length: 50600, startSpeed: 12, maxSpeed: 19, spawnRate: 0.15, minDistance: 250, difficulty: 10 },
+    13: { name: 'Nightmare', length: 55200, startSpeed: 12.5, maxSpeed: 20, spawnRate: 0.16, minDistance: 240, difficulty: 11 },
+    14: { name: 'Oblivion', length: 59800, startSpeed: 13, maxSpeed: 21, spawnRate: 0.18, minDistance: 230, difficulty: 12 },
+    15: { name: 'Cataclysm', length: 64400, startSpeed: 13.5, maxSpeed: 22, spawnRate: 0.19, minDistance: 220, difficulty: 13 },
+    16: { name: 'Apocalypse', length: 69920, startSpeed: 14, maxSpeed: 23, spawnRate: 0.21, minDistance: 210, difficulty: 14 },
+    17: { name: 'Armageddon', length: 75440, startSpeed: 14.5, maxSpeed: 24, spawnRate: 0.22, minDistance: 200, difficulty: 15 },
+    18: { name: 'Extinction', length: 80960, startSpeed: 15, maxSpeed: 25, spawnRate: 0.24, minDistance: 190, difficulty: 16 },
+    19: { name: 'Annihilation', length: 87400, startSpeed: 15.5, maxSpeed: 26, spawnRate: 0.25, minDistance: 180, difficulty: 17 },
+    20: { name: 'Transcendence', length: 96600, startSpeed: 16, maxSpeed: 27, spawnRate: 0.27, minDistance: 170, difficulty: 18 },
+    // Quest Levels 21-30 (Ultimate Challenge) - lengths reduced 8%
+    21: { name: 'Singularity', length: 119600, startSpeed: 21, maxSpeed: 30, spawnRate: 0.32, minDistance: 110, difficulty: 21 },
+    22: { name: 'Paradox', length: 128800, startSpeed: 22, maxSpeed: 31, spawnRate: 0.33, minDistance: 108, difficulty: 22 },
+    23: { name: 'Vortex', length: 138000, startSpeed: 22, maxSpeed: 32, spawnRate: 0.34, minDistance: 105, difficulty: 23 },
+    24: { name: 'Eclipse', length: 147200, startSpeed: 23, maxSpeed: 33, spawnRate: 0.35, minDistance: 102, difficulty: 24 },
+    25: { name: 'Supernova', length: 161000, startSpeed: 23, maxSpeed: 34, spawnRate: 0.36, minDistance: 100, difficulty: 25 },
+    26: { name: 'Quantum', length: 174800, startSpeed: 24, maxSpeed: 35, spawnRate: 0.37, minDistance: 98, difficulty: 26 },
+    27: { name: 'Eternity', length: 193200, startSpeed: 24, maxSpeed: 36, spawnRate: 0.38, minDistance: 95, difficulty: 27 },
+    28: { name: 'Ragnarok', length: 211600, startSpeed: 25, maxSpeed: 37, spawnRate: 0.39, minDistance: 92, difficulty: 28 },
+    29: { name: 'Godslayer', length: 230000, startSpeed: 25, maxSpeed: 38, spawnRate: 0.40, minDistance: 90, difficulty: 29 },
+    30: { name: 'Ascension', length: 257600, startSpeed: 26, maxSpeed: 40, spawnRate: 0.42, minDistance: 88, difficulty: 30 }
 };
 
 // Unlimited Mode Configuration
 const UNLIMITED_MODE = {
     name: 'Unlimited',
-    startSpeed: 8,
+    startSpeed: 9,          // Increased starting speed
     maxSpeed: 22,           // Capped max speed for unlimited (still very fast)
     hardcoreMaxSpeed: 30,   // Hardcore keeps the higher max
     scaleDistance: 150000,  // Slower scaling - takes longer to reach max
-    spawnRate: 0.05,
-    minDistance: 400,
+    spawnRate: 0.07,        // Increased spawn rate
+    minDistance: 350,       // Reduced min distance for more action
     difficulty: 1, // Starts easy but ramps up
     speedRampRate: 0.0003 // How fast difficulty increases over time
 };
@@ -370,6 +394,7 @@ let supabase = null;
 let cloudSyncEnabled = false;
 let currentAccountHasPassword = false;
 let pendingLoginAccountId = null;
+let hasChangedUsername = false; // Track if user has used their one-time name change
 
 // ═══════════════════════════════════════════════════════════
 // TOAST NOTIFICATION SYSTEM
@@ -478,6 +503,86 @@ async function verifyPassword(accountId, password) {
         console.error('Error verifying password:', error);
         return false;
     }
+}
+
+// Change username (one-time only)
+async function changeUsername(newUsername) {
+    if (hasChangedUsername) {
+        showToast('Already Changed', 'You can only change your name once!', 'error');
+        return false;
+    }
+    
+    if (!newUsername || newUsername.trim().length < 3) {
+        showToast('Invalid Name', 'Username must be at least 3 characters', 'error');
+        return false;
+    }
+    
+    if (newUsername.trim().length > 20) {
+        showToast('Too Long', 'Username must be 20 characters or less', 'error');
+        return false;
+    }
+    
+    const cleanName = newUsername.trim();
+    const oldUserId = userId;
+    
+    // Check if username is taken (in cloud)
+    if (cloudSyncEnabled && supabase) {
+        try {
+            const { data, error } = await supabase
+                .from('players')
+                .select('id')
+                .eq('id', cleanName)
+                .single();
+            
+            if (data) {
+                showToast('Name Taken', 'This username is already in use', 'error');
+                return false;
+            }
+        } catch (e) {
+            // No match found - name is available
+        }
+        
+        // Update the player record with new ID
+        try {
+            // First, copy data to new ID
+            const { data: oldData } = await supabase
+                .from('players')
+                .select('*')
+                .eq('id', oldUserId)
+                .single();
+            
+            if (oldData) {
+                // Create new record with new username
+                const newData = { ...oldData, id: cleanName, has_changed_username: true };
+                await supabase.from('players').upsert(newData);
+                
+                // Delete old record
+                await supabase.from('players').delete().eq('id', oldUserId);
+                
+                // Update leaderboard entries
+                await supabase
+                    .from('leaderboard')
+                    .update({ player_id: cleanName, player_name: cleanName })
+                    .eq('player_id', oldUserId);
+            }
+        } catch (error) {
+            console.error('Error updating username in cloud:', error);
+        }
+    }
+    
+    // Update local
+    userId = cleanName;
+    hasChangedUsername = true;
+    localStorage.setItem('jumpHopLastUser', userId);
+    localStorage.setItem('jumpHopUsernameChanged_' + cleanName, 'true');
+    
+    saveProgress();
+    if (cloudSyncEnabled) saveToCloud();
+    
+    showToast('Name Changed!', `You are now: ${cleanName}`, 'success');
+    document.getElementById('account-id-display').textContent = cleanName;
+    
+    return true;
 }
 
 // Set password for current account
@@ -704,6 +809,8 @@ async function saveToCloud() {
             coins: coins,
             hops: hops,
             high_score: highScore,
+            unlimited_high_score: unlimitedHighScore,
+            hardcore_high_score: hardcoreHighScore,
             unlocked_colors: unlockedColors,
             unlocked_shapes: unlockedShapes,
             unlocked_backgrounds: unlockedBackgrounds,
@@ -723,6 +830,7 @@ async function saveToCloud() {
             season_pass_premium: seasonPassPremium,
             claimed_rewards: claimedRewards,
             custom_color_unlocked: customColorUnlocked,
+            has_changed_username: hasChangedUsername,
             updated_at: new Date().toISOString()
         };
         
@@ -770,6 +878,8 @@ async function loadFromCloud() {
             coins = data.coins || 0;
             hops = data.hops || 0;
             highScore = data.high_score || 0;
+            unlimitedHighScore = data.unlimited_high_score || 0;
+            hardcoreHighScore = data.hardcore_high_score || 0;
             unlockedColors = data.unlocked_colors || ['#00f3ff'];
             unlockedShapes = data.unlocked_shapes || ['square'];
             unlockedBackgrounds = data.unlocked_backgrounds || ['default', 'space'];
@@ -789,6 +899,7 @@ async function loadFromCloud() {
             seasonPassPremium = data.season_pass_premium || false;
             claimedRewards = data.claimed_rewards || [];
             customColorUnlocked = data.custom_color_unlocked || false;
+            hasChangedUsername = data.has_changed_username || false;
             
             console.log('☁️ Loaded from cloud');
             updateSyncStatus(true, 'Cloud Synced');
@@ -801,6 +912,174 @@ async function loadFromCloud() {
     }
     return false;
 }
+
+// ==================== LEADERBOARD FUNCTIONS ====================
+
+// Save score to leaderboard
+async function saveToLeaderboard(mode, score) {
+    if (!cloudSyncEnabled || !supabase || score <= 0) return;
+    
+    try {
+        // Get the player's display name
+        const displayName = localStorage.getItem('jumpHopLastUser') || 'Anonymous';
+        
+        const { error } = await supabase
+            .from('leaderboard')
+            .upsert({
+                player_id: userId,
+                player_name: displayName,
+                mode: mode, // 'unlimited' or 'hardcore'
+                score: score,
+                updated_at: new Date().toISOString()
+            }, { 
+                onConflict: 'player_id,mode',
+                ignoreDuplicates: false 
+            });
+        
+        if (error) {
+            console.error('Leaderboard save error:', error);
+        } else {
+            console.log(`🏆 Leaderboard updated: ${mode} - ${score}`);
+        }
+    } catch (error) {
+        console.error('Leaderboard save failed:', error);
+    }
+}
+
+// Fetch leaderboard from database
+async function fetchLeaderboard(mode = 'unlimited') {
+    if (!cloudSyncEnabled || !supabase) {
+        return [];
+    }
+    
+    try {
+        const { data, error } = await supabase
+            .from('leaderboard')
+            .select('player_id, player_name, score, updated_at')
+            .eq('mode', mode)
+            .order('score', { ascending: false })
+            .limit(50);
+        
+        if (error) {
+            console.error('Leaderboard fetch error:', error);
+            return [];
+        }
+        
+        return data || [];
+    } catch (error) {
+        console.error('Leaderboard fetch failed:', error);
+        return [];
+    }
+}
+
+// Get player's rank on leaderboard
+async function getPlayerRank(mode = 'unlimited') {
+    if (!cloudSyncEnabled || !supabase) return null;
+    
+    try {
+        // Get player's score
+        const { data: playerData, error: playerError } = await supabase
+            .from('leaderboard')
+            .select('score')
+            .eq('player_id', userId)
+            .eq('mode', mode)
+            .single();
+        
+        if (playerError || !playerData) return null;
+        
+        // Count how many players have higher scores
+        const { count, error: countError } = await supabase
+            .from('leaderboard')
+            .select('*', { count: 'exact', head: true })
+            .eq('mode', mode)
+            .gt('score', playerData.score);
+        
+        if (countError) return null;
+        
+        return (count || 0) + 1; // Rank is count + 1
+    } catch (error) {
+        console.error('Get rank failed:', error);
+        return null;
+    }
+}
+
+// Display leaderboard in modal
+async function displayLeaderboard(mode = 'unlimited') {
+    const content = document.getElementById('leaderboard-content');
+    const yourBest = document.getElementById('your-best-score');
+    const yourRank = document.getElementById('your-rank');
+    
+    if (!content) return;
+    
+    content.innerHTML = '<div class="leaderboard-loading">Loading...</div>';
+    
+    // Fetch leaderboard data
+    const leaderboard = await fetchLeaderboard(mode);
+    const rank = await getPlayerRank(mode);
+    
+    // Update your stats
+    const bestScore = mode === 'hardcore' ? hardcoreHighScore : unlimitedHighScore;
+    yourBest.textContent = bestScore.toLocaleString();
+    yourRank.textContent = rank ? `#${rank}` : '#--';
+    
+    if (leaderboard.length === 0) {
+        content.innerHTML = `
+            <div class="leaderboard-empty">
+                <p>🏆 No scores yet!</p>
+                <p>Be the first to set a record!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Build leaderboard HTML
+    let html = '';
+    leaderboard.forEach((entry, index) => {
+        const rank = index + 1;
+        const isYou = entry.player_id === userId;
+        let rankClass = '';
+        if (rank === 1) rankClass = 'top-1';
+        else if (rank === 2) rankClass = 'top-2';
+        else if (rank === 3) rankClass = 'top-3';
+        
+        const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+        
+        html += `
+            <div class="leaderboard-entry ${rankClass} ${isYou ? 'you' : ''}">
+                <div class="lb-rank">${medal}</div>
+                <div class="lb-name">${entry.player_name || 'Anonymous'}${isYou ? ' (You)' : ''}</div>
+                <div class="lb-score">${entry.score.toLocaleString()}</div>
+            </div>
+        `;
+    });
+    
+    content.innerHTML = html;
+}
+
+// Show leaderboard modal
+function showLeaderboard() {
+    console.log('showLeaderboard called');
+    const modal = document.getElementById('leaderboard-modal');
+    if (modal) {
+        console.log('Modal found, showing...');
+        modal.style.display = 'flex';
+        modal.style.opacity = '1';
+        modal.style.visibility = 'visible';
+        displayLeaderboard(currentLeaderboardMode);
+    } else {
+        console.error('Leaderboard modal not found!');
+    }
+}
+
+// Hide leaderboard modal
+function hideLeaderboard() {
+    const modal = document.getElementById('leaderboard-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// ==================== END LEADERBOARD ====================
 
 // Periodic time tracking (call this every minute while playing)
 let timeTrackingInterval = null;
@@ -1370,6 +1649,7 @@ let lastObstacleSpawnDistance = 0;
 function spawnCoinsSafely() {
     // Only spawn coins during active gameplay
     if (gameState !== 'PLAYING') return;
+    if (isHardcoreMode) return; // No coins in hardcore mode
     if (safeModeTimer > 0 || landingGracePeriod > 0) return;
     if (distanceTraveled < 500) return; // Grace period at start
     
@@ -1942,8 +2222,8 @@ class Obstacle {
             this.startY = this.y;
             this.color = '#ff6600';
         } else if (type === 'PILLAR') {
-            this.w = 30;
-            this.h = 105;
+            this.w = 26;  // Reduced 13%
+            this.h = 91;  // Reduced 13%
             this.y = canvas.height - GROUND_HEIGHT - this.h;
             this.color = '#8844ff';
         } else if (type === 'LASER') {
@@ -3009,8 +3289,14 @@ function drawShape(context, shape, size, color) {
 }
 
 function resize() {
+    const oldHeight = canvas.height || window.innerHeight;
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    
+    // Calculate how much the ground position changed
+    const groundY = canvas.height - GROUND_HEIGHT;
+    const oldGroundY = oldHeight - GROUND_HEIGHT;
+    const groundDelta = groundY - oldGroundY;
     
     // Cap spawn width to prevent cheating with ultra-wide screens
     // Use reference width or actual width, whichever is smaller
@@ -3024,22 +3310,50 @@ function resize() {
         if (player.isGrounded) {
             player.y = canvas.height - GROUND_HEIGHT - player.size;
         } else {
+            // Shift player by ground delta to maintain relative position
+            player.y += groundDelta;
             if (player.y > canvas.height - GROUND_HEIGHT - player.size) {
                 player.y = canvas.height - GROUND_HEIGHT - player.size;
             }
         }
     }
-    // Fix obstacle positions
+    
+    // Fix obstacle positions - recalculate from ground level
     if (obstacles) {
         obstacles.forEach(obs => {
-            // Recalculate Y based on type
-            if (obs.type === 'SAW') {
+            if (obs.type === 'SAW' || obs.type === 'MOVING_SAW') {
+                // SAW floats above ground
                 obs.y = canvas.height - GROUND_HEIGHT - obs.h / 2;
+                if (obs.startY !== undefined) {
+                    obs.startY = obs.y;
+                }
+            } else if (obs.type === 'LASER') {
+                obs.y = canvas.height - GROUND_HEIGHT - obs.h;
             } else {
                 obs.y = canvas.height - GROUND_HEIGHT - obs.h;
             }
         });
     }
+    
+    // Fix powerup positions - recalculate from ground level
+    if (powerUps) {
+        powerUps.forEach(pu => {
+            // Shift powerups by ground delta
+            pu.y += groundDelta;
+            // Clamp to valid range
+            const maxY = canvas.height - GROUND_HEIGHT - pu.size;
+            if (pu.y > maxY) pu.y = maxY;
+        });
+    }
+    
+    // Fix ability coins
+    if (abilityCoins) {
+        abilityCoins.forEach(coin => {
+            coin.y += groundDelta;
+            coin.groundY = canvas.height - GROUND_HEIGHT - coin.size;
+        });
+    }
+    
     // Fix finish line
     if (finishLine) {
         finishLine.h = canvas.height - GROUND_HEIGHT;
@@ -3301,6 +3615,9 @@ function checkCollisions() {
 let coins = 0;
 let hops = 0; // Premium currency (crystals)
 let highScore = 0;
+let unlimitedHighScore = 0; // Best score in unlimited mode
+let hardcoreHighScore = 0;  // Best score in hardcore mode
+let currentLeaderboardMode = 'unlimited'; // Which leaderboard tab is active
 let unlockedColors = ['#00f3ff'];
 let unlockedShapes = ['square'];
 let unlockedBackgrounds = ['default', 'space'];
@@ -3895,6 +4212,20 @@ function gameOver() {
     if (score > highScore) {
         highScore = score;
     }
+    
+    // Update unlimited/hardcore high scores and save to leaderboard
+    if (isUnlimitedMode && !isHardcoreMode) {
+        if (score > unlimitedHighScore) {
+            unlimitedHighScore = score;
+            saveToLeaderboard('unlimited', score);
+        }
+    } else if (isHardcoreMode) {
+        if (score > hardcoreHighScore) {
+            hardcoreHighScore = score;
+            saveToLeaderboard('hardcore', score);
+        }
+    }
+    
     saveProgress();
     updateUI();
     
@@ -4038,7 +4369,17 @@ function update(dt = 1) {
         if (boostTimer <= 0) {
             isBoosting = false;
             player.canDoubleJump = true; // Give double jump when boost ends
-            // No obstacle clear - powerup simply expires
+            
+            // Clear all obstacles currently on screen to prevent landing on one
+            obstacles.forEach(obs => {
+                if (obs.x < canvas.width && obs.x > -100) {
+                    obs.markedForDeletion = true;
+                    createParticles(obs.x + obs.w / 2, obs.y + obs.h / 2, 3, '#00f3ff');
+                }
+            });
+            
+            // Give safe landing period
+            safeModeTimer = 60; // 1 second grace period
         }
     }
     
@@ -4243,6 +4584,11 @@ function update(dt = 1) {
 
 
 function drawBackground() {
+    // Use simplified backgrounds for better performance
+    const simplify = perfSettings.simplifyBackgrounds;
+    const maxStars = perfSettings.maxStars || 50;
+    const maxWaves = perfSettings.maxAuroraWaves || 3;
+    
     // Different backgrounds based on currentBackground
     switch (currentBackground) {
         case 'aurora':
@@ -4254,29 +4600,32 @@ function drawBackground() {
             ctx.fillStyle = auroraGrad;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Stars
+            // Stars - use cached positions, limit count
             ctx.fillStyle = '#fff';
-            for (let i = 0; i < 100; i++) {
+            const starCount = Math.min(maxStars, simplify ? 25 : 100);
+            for (let i = 0; i < starCount; i++) {
                 const x = (i * 73) % canvas.width;
                 const y = (i * 47) % (canvas.height * 0.6);
-                ctx.globalAlpha = 0.3 + Math.sin(bgTime * 2 + i) * 0.3;
-                ctx.beginPath();
-                ctx.arc(x, y, Math.random() * 1.5, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.globalAlpha = simplify ? 0.5 : (0.3 + Math.sin(bgTime * 2 + i) * 0.3);
+                ctx.fillRect(x | 0, y | 0, 2, 2); // Faster than arc
             }
             ctx.globalAlpha = 1;
 
-            // Aurora waves
-            for (let wave = 0; wave < 3; wave++) {
+            // Aurora waves - limit count for performance
+            const waveCount = Math.min(maxWaves, simplify ? 1 : 3);
+            const waveStep = simplify ? 40 : 20; // Larger steps for performance
+            for (let wave = 0; wave < waveCount; wave++) {
                 ctx.save();
                 ctx.globalAlpha = 0.3 - wave * 0.08;
                 const hue = (bgTime * 20 + wave * 40) % 360;
                 ctx.strokeStyle = `hsl(${hue}, 80%, 60%)`;
-                ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-                ctx.shadowBlur = 30;
+                if (!simplify) {
+                    ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+                    ctx.shadowBlur = 30;
+                }
                 ctx.lineWidth = 40 - wave * 10;
                 ctx.beginPath();
-                for (let x = 0; x <= canvas.width; x += 20) {
+                for (let x = 0; x <= canvas.width; x += waveStep) {
                     const y = canvas.height * 0.3 + 
                         Math.sin((x + bgOffset) * 0.01 + wave) * 50 +
                         Math.sin((x + bgOffset) * 0.02 + bgTime + wave) * 30;
@@ -4287,21 +4636,23 @@ function drawBackground() {
                 ctx.restore();
             }
 
-            // Snowy mountains
-            ctx.fillStyle = '#1a2a40';
-            ctx.beginPath();
-            ctx.moveTo(0, canvas.height);
-            for (let i = 0; i <= canvas.width + 100; i += 80) {
-                const x = (i + bgOffset * 0.3) % (canvas.width + 200) - 100;
-                const h = 150 + Math.sin(i * 0.02) * 80;
-                ctx.lineTo(x, canvas.height - GROUND_HEIGHT - h);
-                ctx.lineTo(x + 40, canvas.height - GROUND_HEIGHT - h + 30);
+            // Snowy mountains - skip if simplifying
+            if (!simplify) {
+                ctx.fillStyle = '#1a2a40';
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height);
+                for (let i = 0; i <= canvas.width + 100; i += 80) {
+                    const x = (i + bgOffset * 0.3) % (canvas.width + 200) - 100;
+                    const h = 150 + Math.sin(i * 0.02) * 80;
+                    ctx.lineTo(x, canvas.height - GROUND_HEIGHT - h);
+                    ctx.lineTo(x + 40, canvas.height - GROUND_HEIGHT - h + 30);
+                }
+                ctx.lineTo(canvas.width, canvas.height);
+                ctx.fill();
             }
-            ctx.lineTo(canvas.width, canvas.height);
-            ctx.fill();
 
-            // Snow caps
-            ctx.fillStyle = '#ddeeff';
+            // Snow caps - skip if simplifying
+            if (!simplify) ctx.fillStyle = '#ddeeff';
             ctx.beginPath();
             for (let i = 0; i <= canvas.width + 100; i += 80) {
                 const x = (i + bgOffset * 0.3) % (canvas.width + 200) - 100;
@@ -6533,35 +6884,42 @@ function drawBackground() {
 
 
 function draw() {
+    // Cache canvas dimensions to avoid property lookups
+    const cw = canvas.width;
+    const ch = canvas.height;
+    
     // Fill with black instead of clearRect when alpha is false - slightly faster
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, cw, ch);
 
     drawBackground();
 
     // Floor - batched drawing to reduce state changes
-    const groundY = canvas.height - GROUND_HEIGHT;
+    const groundY = ch - GROUND_HEIGHT;
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, groundY, canvas.width, GROUND_HEIGHT);
+    ctx.fillRect(0, groundY, cw, GROUND_HEIGHT);
 
     // Batch all floor drawing into minimal state changes
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(0, groundY);
-    ctx.lineTo(canvas.width, groundY);
+    ctx.lineTo(cw, groundY);
     ctx.stroke();
 
-    // Floor pattern - batch all lines together
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    const floorStart = (floorPatternOffset | 0);
-    for (let i = floorStart; i < canvas.width; i += 40) {
-        ctx.moveTo(i, groundY);
-        ctx.lineTo(i - 20, canvas.height);
+    // Floor pattern - batch all lines together (skip if simplifying)
+    if (!perfSettings.simplifyBackgrounds) {
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        const floorStart = (floorPatternOffset | 0);
+        const floorStep = 40;
+        for (let i = floorStart; i < cw; i += floorStep) {
+            ctx.moveTo(i, groundY);
+            ctx.lineTo(i - 20, ch);
+        }
+        ctx.stroke();
     }
-    ctx.stroke();
 
     if (finishLine) finishLine.draw();
 
@@ -6593,18 +6951,19 @@ function draw() {
         drawPlayerHearts();
     }
     
-    // Batch particle drawing - use single globalAlpha reset at end
-    let lastAlpha = 1;
-    for (let i = 0, len = particles.length; i < len; i++) {
-        const p = particles[i];
-        if (p.active && p.life > 0) {
-            ctx.globalAlpha = p.life;
-            ctx.fillStyle = p.color;
-            ctx.fillRect(p.x | 0, p.y | 0, p.size | 0, p.size | 0);
-            lastAlpha = p.life;
+    // Batch particle drawing - optimized for performance
+    const particleLen = particles.length;
+    if (particleLen > 0) {
+        for (let i = 0; i < particleLen; i++) {
+            const p = particles[i];
+            if (p.active && p.life > 0) {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x | 0, p.y | 0, p.size | 0, p.size | 0);
+            }
         }
+        ctx.globalAlpha = 1;
     }
-    if (lastAlpha !== 1) ctx.globalAlpha = 1;
     
     // Cube fragments
     for (let i = 0, len = cubeFragments.length; i < len; i++) {
@@ -6743,6 +7102,9 @@ function drawProgressBar() {
 }
 
 function loop(currentTime) {
+    // Schedule next frame immediately for smoother timing
+    requestAnimationFrame(loop);
+    
     // Cache timestamp for this frame
     frameTimestamp = currentTime;
     
@@ -6753,14 +7115,13 @@ function loop(currentTime) {
     
     // Skip frame if we're falling too far behind (prevents spiral)
     if (rawDelta > 100) {
-        // Tab was in background, just request next frame
-        requestAnimationFrame(loop);
+        // Tab was in background, just skip this frame
         return;
     }
     
     // Normalize delta time to target FPS and cap to prevent huge jumps
     deltaTime = rawDelta / TARGET_FRAME_TIME;
-    deltaTime = Math.min(deltaTime, 2); // Tighter cap for smoother gameplay
+    deltaTime = Math.min(deltaTime, 1.5); // Tighter cap for smoother gameplay
     
     // Track frame timing for performance monitoring
     updateFrameStats(rawDelta);
@@ -6822,7 +7183,6 @@ function loop(currentTime) {
     }
 
     draw();
-    requestAnimationFrame(loop);
 }
 
 // Level selection UI
@@ -9288,6 +9648,9 @@ function saveProgress() {
     localStorage.setItem(prefix + 'coins', coins.toString());
     localStorage.setItem(prefix + 'hops', hops.toString());
     localStorage.setItem(prefix + 'highScore', highScore.toString());
+    localStorage.setItem(prefix + 'unlimitedHighScore', unlimitedHighScore.toString());
+    localStorage.setItem(prefix + 'hardcoreHighScore', hardcoreHighScore.toString());
+    localStorage.setItem(prefix + 'hasChangedUsername', hasChangedUsername ? 'true' : 'false');
     localStorage.setItem(prefix + 'unlockedColors', JSON.stringify(unlockedColors));
     localStorage.setItem(prefix + 'unlockedShapes', JSON.stringify(unlockedShapes));
     localStorage.setItem(prefix + 'unlockedBackgrounds', JSON.stringify(unlockedBackgrounds));
@@ -9362,6 +9725,17 @@ function loadProgress() {
     const savedHighScore = localStorage.getItem(prefix + 'highScore');
     if (savedHighScore) highScore = parseInt(savedHighScore);
     else highScore = 0;
+    
+    const savedUnlimitedHS = localStorage.getItem(prefix + 'unlimitedHighScore');
+    if (savedUnlimitedHS) unlimitedHighScore = parseInt(savedUnlimitedHS);
+    else unlimitedHighScore = 0;
+    
+    const savedHardcoreHS = localStorage.getItem(prefix + 'hardcoreHighScore');
+    if (savedHardcoreHS) hardcoreHighScore = parseInt(savedHardcoreHS);
+    else hardcoreHighScore = 0;
+    
+    const savedUsernameChanged = localStorage.getItem(prefix + 'hasChangedUsername');
+    hasChangedUsername = savedUsernameChanged === 'true';
 
     const savedColors = localStorage.getItem(prefix + 'unlockedColors');
     if (savedColors) unlockedColors = JSON.parse(savedColors);
@@ -9556,18 +9930,43 @@ async function switchAccount(newId) {
     if (!newId || newId.trim() === '') return;
     const targetId = newId.trim();
     
-    // Check if target account has password protection
-    if (cloudSyncEnabled) {
-        const { hasPassword } = await checkAccountPassword(targetId);
-        if (hasPassword) {
-            // Account is password protected - show login modal
-            showLoginModal(targetId);
-            return;
-        }
+    // Check if this is the current account
+    if (targetId === userId) {
+        showToast('Already Logged In', 'You are already on this account', 'info');
+        return;
     }
     
-    // No password - proceed with switch
-    await performAccountSwitch(targetId);
+    // Check if target account exists and has password protection
+    if (cloudSyncEnabled && supabase) {
+        try {
+            const { data, error } = await supabase
+                .from('players')
+                .select('id, password_hash')
+                .eq('id', targetId)
+                .single();
+            
+            if (error || !data) {
+                showToast('Account Not Found', 'This account does not exist', 'error');
+                return;
+            }
+            
+            const hasPassword = data.password_hash !== null && data.password_hash !== '';
+            
+            if (!hasPassword) {
+                showToast('Access Denied', 'This account has no password. Only original device can access it.', 'error');
+                return;
+            }
+            
+            // Account is password protected - show login modal
+            showLoginModal(targetId);
+            
+        } catch (err) {
+            console.error('Error checking account:', err);
+            showToast('Error', 'Could not verify account', 'error');
+        }
+    } else {
+        showToast('Cloud Required', 'Cloud sync required to switch accounts', 'error');
+    }
 }
 
 // Actually perform the account switch (after password verification if needed)
@@ -9666,6 +10065,41 @@ document.getElementById('cosmetics-btn').addEventListener('click', () => {
     showCustomizeScreen();
 });
 
+// Leaderboard button
+const leaderboardBtn = document.getElementById('leaderboard-btn');
+if (leaderboardBtn) {
+    leaderboardBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Leaderboard button clicked');
+        showLeaderboard();
+    });
+} else {
+    console.error('Leaderboard button not found!');
+}
+
+// Leaderboard close button
+document.getElementById('leaderboard-close-btn').addEventListener('click', () => {
+    hideLeaderboard();
+});
+
+// Leaderboard modal backdrop click to close
+document.getElementById('leaderboard-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'leaderboard-modal') {
+        hideLeaderboard();
+    }
+});
+
+// Leaderboard tab buttons
+document.querySelectorAll('.lb-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentLeaderboardMode = tab.dataset.mode;
+        displayLeaderboard(currentLeaderboardMode);
+    });
+});
+
 // Rewards button (top UI)
 document.getElementById('season-pass-btn').addEventListener('click', (e) => {
     e.stopPropagation();
@@ -9741,6 +10175,7 @@ function showSettings() {
     document.getElementById('settings-modal').classList.add('active');
     updateSettingsUI();
     updateStatsUI(); // Update stats display
+    updateUsernameChangeUI(); // Update username change UI
 }
 
 function closeSettings() {
@@ -9910,28 +10345,67 @@ document.getElementById('switch-login-btn').addEventListener('click', async () =
         return;
     }
     
-    // Check if account exists and has a password
-    const { hasPassword } = await checkAccountPassword(accountId);
-    
-    if (hasPassword) {
-        // Account has password - verify it
-        if (!password) {
-            errorEl.textContent = 'This account requires a password';
-            errorEl.style.display = 'block';
-            return;
-        }
-        
-        const valid = await verifyPassword(accountId, password);
-        if (!valid) {
-            errorEl.textContent = 'Incorrect password';
-            errorEl.style.display = 'block';
-            return;
-        }
+    // Check if this is the current account (allow switching back without password)
+    if (accountId === userId) {
+        errorEl.textContent = 'You are already logged into this account';
+        errorEl.style.display = 'block';
+        return;
     }
     
-    // Success - switch to the account
-    document.getElementById('switch-account-modal').classList.remove('active');
-    await performAccountSwitch(accountId);
+    // Check if account exists in the cloud
+    if (cloudSyncEnabled && supabase) {
+        try {
+            const { data: accountData, error: accountError } = await supabase
+                .from('players')
+                .select('id, password_hash')
+                .eq('id', accountId)
+                .single();
+            
+            if (accountError || !accountData) {
+                // Account doesn't exist
+                errorEl.textContent = 'Account not found. Check the ID or create a new account.';
+                errorEl.style.display = 'block';
+                return;
+            }
+            
+            // Account exists - check if it has a password
+            const hasPassword = accountData.password_hash !== null && accountData.password_hash !== '';
+            
+            if (!hasPassword) {
+                // Account has no password - cannot be accessed by others
+                errorEl.textContent = 'This account has no password set. Only the original device can access it.';
+                errorEl.style.display = 'block';
+                return;
+            }
+            
+            // Account has password - verify it
+            if (!password) {
+                errorEl.textContent = 'This account requires a password';
+                errorEl.style.display = 'block';
+                return;
+            }
+            
+            const valid = await verifyPassword(accountId, password);
+            if (!valid) {
+                errorEl.textContent = 'Incorrect password';
+                errorEl.style.display = 'block';
+                return;
+            }
+            
+            // Success - switch to the account
+            document.getElementById('switch-account-modal').classList.remove('active');
+            await performAccountSwitch(accountId);
+            
+        } catch (error) {
+            console.error('Error checking account:', error);
+            errorEl.textContent = 'Error checking account. Try again.';
+            errorEl.style.display = 'block';
+        }
+    } else {
+        // No cloud sync - just switch locally
+        errorEl.textContent = 'Cloud sync required to switch accounts';
+        errorEl.style.display = 'block';
+    }
 });
 
 // Forgot password from switch account modal
@@ -9966,6 +10440,44 @@ document.getElementById('copy-account-btn').addEventListener('click', () => {
         showToast('Copied!', 'Account ID copied to clipboard', 'success', 2000);
     });
 });
+
+// Username change event listener
+document.getElementById('change-username-btn').addEventListener('click', async () => {
+    const newName = document.getElementById('new-username-input').value;
+    const success = await changeUsername(newName);
+    if (success) {
+        document.getElementById('new-username-input').value = '';
+        updateUsernameChangeUI();
+    }
+});
+
+// Function to update username change UI based on state
+function updateUsernameChangeUI() {
+    const section = document.getElementById('change-name-section');
+    const input = document.getElementById('new-username-input');
+    const btn = document.getElementById('change-username-btn');
+    const hint = document.getElementById('change-name-hint');
+    
+    if (hasChangedUsername) {
+        input.disabled = true;
+        input.placeholder = 'Already used';
+        input.style.opacity = '0.4';
+        btn.disabled = true;
+        btn.style.opacity = '0.4';
+        btn.style.cursor = 'not-allowed';
+        hint.innerHTML = '✅ You have already changed your username';
+        hint.style.color = '#00ff88';
+    } else {
+        input.disabled = false;
+        input.placeholder = 'Enter new username';
+        input.style.opacity = '1';
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+        hint.innerHTML = '⚠️ You can only change your name once!';
+        hint.style.color = '';
+    }
+}
 
 // Password protection event listeners
 document.getElementById('set-password-btn').addEventListener('click', showPasswordModal);

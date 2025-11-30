@@ -159,7 +159,7 @@ function detectPerformanceLevel() {
         perfSettings.reducedShadowBlur = 0;
         perfSettings.shadowsEnabled = false; // Disable shadows on high-res
         perfSettings.throttleParticleSpawn = 0.4;
-        perfSettings.simplifyBackgrounds = true; // Simplified backgrounds
+        perfSettings.simplifyBackgrounds = false; // Keep full backgrounds for visual quality
         perfSettings.maxStars = 30;
         perfSettings.maxAuroraWaves = 2;
         console.log('🔧 High-res display - optimized graphics');
@@ -4636,16 +4636,34 @@ function drawBackground() {
     // Use simplified backgrounds for better performance
     const simplify = perfSettings.simplifyBackgrounds;
     
-    // Ultra-simplified background for maximum performance
+    const maxStars = perfSettings.maxStars || 50;
+    const maxWaves = perfSettings.maxAuroraWaves || 3;
+    
+    // Ultra-simplified background - just draw base color for each background type
     if (simplify) {
-        // Just use a solid dark gradient - no fancy effects
-        ctx.fillStyle = '#0a0a15';
+        let bgColor = '#0a0a15';
+        switch (currentBackground) {
+            case 'aurora': bgColor = '#0a0a20'; break;
+            case 'volcanic': bgColor = '#1a0505'; break;
+            case 'cyber': bgColor = '#0a0510'; break;
+            case 'ocean': bgColor = '#001020'; break;
+            case 'forest': bgColor = '#0a1a0a'; break;
+            case 'desert': bgColor = '#1a1005'; break;
+            case 'space': bgColor = '#020208'; break;
+            case 'neon': bgColor = '#0a0015'; break;
+            case 'retro': bgColor = '#1a0a1a'; break;
+            case 'crystal': bgColor = '#0a0a1a'; break;
+            case 'storm': bgColor = '#0a0a15'; break;
+            case 'matrix': bgColor = '#000a00'; break;
+            case 'sunset': bgColor = '#1a0a0a'; break;
+            case 'arctic': bgColor = '#0a1020'; break;
+            case 'nebula': bgColor = '#0a0510'; break;
+            default: bgColor = '#0a0a15'; break;
+        }
+        ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         return;
     }
-    
-    const maxStars = perfSettings.maxStars || 50;
-    const maxWaves = perfSettings.maxAuroraWaves || 3;
     
     // Different backgrounds based on currentBackground
     switch (currentBackground) {

@@ -3591,44 +3591,59 @@ function claimSeasonReward(track, level) {
     const reward = rewards.find(r => r.level === level);
     if (!reward) return false;
     
-    // Grant reward
+    // Grant reward based on type
     switch (reward.type) {
         case 'coins':
             coins += reward.amount;
+            console.log(`🪙 Granted ${reward.amount} coins. New total: ${coins}`);
             break;
         case 'hops':
             hops += reward.amount;
+            console.log(`💎 Granted ${reward.amount} hops. New total: ${hops}`);
             break;
         case 'color':
             if (!unlockedColors.includes(reward.value)) {
                 unlockedColors.push(reward.value);
+                console.log(`🎨 Unlocked color: ${reward.value}`);
             }
             break;
         case 'shape':
             if (!unlockedShapes.includes(reward.value)) {
                 unlockedShapes.push(reward.value);
+                console.log(`🔷 Unlocked shape: ${reward.value}`);
             }
             break;
         case 'background':
             if (!unlockedBackgrounds.includes(reward.value)) {
                 unlockedBackgrounds.push(reward.value);
+                console.log(`🖼️ Unlocked background: ${reward.value}`);
             }
             break;
         case 'skin':
             if (!unlockedSkins.includes(reward.value)) {
                 unlockedSkins.push(reward.value);
+                console.log(`👤 Unlocked skin: ${reward.value}`);
             }
             break;
         case 'title':
             // Store title (could add a titles array later)
+            console.log(`🏆 Granted title: ${reward.value}`);
             break;
     }
     
     claimedRewards.push(rewardKey);
     showToast(`Claimed: ${reward.name}!`, 'success');
+    
+    // Save progress
     saveProgress();
     saveToCloud();
-    renderRewardsUI();
+    
+    // Update ALL UI elements
+    updateUI(); // Update main UI (coins display)
+    updateHopsDisplay(); // Update hops display
+    renderRewardsUI(); // Update rewards screen
+    
+    console.log(`✅ Reward claimed: ${reward.name} (${rewardKey})`);
     return true;
 }
 

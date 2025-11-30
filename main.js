@@ -764,8 +764,6 @@ async function loadFromCloud() {
             unlockedShapes = data.unlocked_shapes || ['square'];
             unlockedBackgrounds = data.unlocked_backgrounds || ['default', 'space'];
             unlockedSkins = data.unlocked_skins || ['none'];
-            // Ensure gold-god is unlocked for testing
-            if (!unlockedSkins.includes('gold-god')) unlockedSkins.push('gold-god');
             playerColor = data.player_color || '#00f3ff';
             playerShape = data.player_shape || 'square';
             playerSkin = data.player_skin || 'none';
@@ -3293,7 +3291,7 @@ let highScore = 0;
 let unlockedColors = ['#00f3ff'];
 let unlockedShapes = ['square'];
 let unlockedBackgrounds = ['default', 'space'];
-let unlockedSkins = ['none', 'gold-god']; // 'none' means use shape/color instead - gold-god unlocked for testing
+let unlockedSkins = ['none']; // 'none' means use shape/color instead
 let customColorUnlocked = false; // Custom color picker costs 5000 coins
 
 // Season Pass
@@ -9350,10 +9348,8 @@ function loadProgress() {
     const savedSkins = localStorage.getItem(prefix + 'unlockedSkins');
     if (savedSkins) {
         unlockedSkins = JSON.parse(savedSkins);
-        // Ensure gold-god is unlocked for testing
-        if (!unlockedSkins.includes('gold-god')) unlockedSkins.push('gold-god');
     }
-    else unlockedSkins = ['none', 'gold-god']; // gold-god unlocked for testing
+    else unlockedSkins = ['none'];
 
     // Load saved customization (per user)
     const savedColor = localStorage.getItem(prefix + 'color');

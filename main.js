@@ -132,41 +132,44 @@ function getCachedElement(id) {
 const PI2 = Math.PI * 2;
 const PI_HALF = Math.PI / 2;
 
-// Detect low-end devices and adjust settings
+// Detect device and adjust settings for optimal performance
 function detectPerformanceLevel() {
-    // Check for low-end indicators
+    // Check for low-end indicators (mobile devices)
     const isLowEnd = navigator.hardwareConcurrency <= 2 || 
                      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
-    // Check for medium-end devices
-    const isMedium = navigator.hardwareConcurrency <= 4;
-    
-    // Check screen size - larger screens need more optimization
-    const isLargeScreen = window.innerWidth > 1920 || window.innerHeight > 1080;
-    const isFullscreen = document.fullscreenElement || window.innerHeight >= screen.height - 100;
+    // Check for high-res displays that need optimization
+    const isHighRes = window.screen.height > 1080;
     
     if (isLowEnd) {
-        perfSettings.maxParticles = 25;
+        perfSettings.maxParticles = 20;
         perfSettings.maxCubeFragments = 8;
         perfSettings.reducedShadowBlur = 0;
         perfSettings.skipBackgroundDetails = true;
         perfSettings.shadowsEnabled = false;
-        perfSettings.throttleParticleSpawn = 0.25;
+        perfSettings.throttleParticleSpawn = 0.2;
         perfSettings.simplifyBackgrounds = true;
         perfSettings.maxStars = 15;
         perfSettings.maxAuroraWaves = 1;
-        console.log('🔧 Low-end device detected - using minimal graphics');
-    } else if (isMedium || isLargeScreen || isFullscreen) {
+        console.log('🔧 Low-end device - minimal graphics');
+    } else if (isHighRes) {
+        // High-res displays need optimizations for smooth gameplay
         perfSettings.maxParticles = 40;
-        perfSettings.maxCubeFragments = 12;
-        perfSettings.reducedShadowBlur = 2;
+        perfSettings.maxCubeFragments = 15;
+        perfSettings.reducedShadowBlur = 0;
+        perfSettings.shadowsEnabled = false; // Disable shadows on high-res
         perfSettings.throttleParticleSpawn = 0.4;
-        perfSettings.simplifyBackgrounds = isLargeScreen || isFullscreen;
+        perfSettings.simplifyBackgrounds = true; // Simplified backgrounds
         perfSettings.maxStars = 30;
         perfSettings.maxAuroraWaves = 2;
-        console.log('🔧 Optimized graphics for smooth performance');
+        console.log('🔧 High-res display - optimized graphics');
     } else {
-        // High-end device - use full graphics
+        // Standard 1080p or lower - full graphics
+        perfSettings.maxParticles = 60;
+        perfSettings.maxCubeFragments = 20;
+        perfSettings.reducedShadowBlur = 3;
+        perfSettings.shadowsEnabled = true;
+        perfSettings.throttleParticleSpawn = 0.5;
         perfSettings.simplifyBackgrounds = false;
         perfSettings.maxStars = 50;
         perfSettings.maxAuroraWaves = 3;
@@ -174,15 +177,9 @@ function detectPerformanceLevel() {
 }
 detectPerformanceLevel();
 
-// Re-detect on fullscreen change for smooth performance
+// Re-detect on fullscreen change (just clear gradient cache)
 document.addEventListener('fullscreenchange', () => {
-    detectPerformanceLevel();
     clearGradientCache();
-});
-window.addEventListener('resize', () => {
-    // Debounce resize detection
-    clearTimeout(window.resizePerformanceTimeout);
-    window.resizePerformanceTimeout = setTimeout(detectPerformanceLevel, 200);
 });
 
 // Frame timing for smooth animations
@@ -219,39 +216,39 @@ let coinsCollectedThisRun = 0; // Track coins earned in current game
 
 // Level configurations
 const LEVELS = {
-    // Quest Levels 1-10 (Balanced progression) - lengths reduced 8%
-    1: { name: 'Beginner', length: 7360, startSpeed: 6, maxSpeed: 8, spawnRate: 0.035, minDistance: 550, difficulty: 1 },
-    2: { name: 'Easy', length: 10120, startSpeed: 6.5, maxSpeed: 9, spawnRate: 0.04, minDistance: 500, difficulty: 1 },
-    3: { name: 'Medium', length: 12880, startSpeed: 7, maxSpeed: 10, spawnRate: 0.05, minDistance: 450, difficulty: 2 },
-    4: { name: 'Hard', length: 15640, startSpeed: 7.5, maxSpeed: 11, spawnRate: 0.055, minDistance: 420, difficulty: 2 },
-    5: { name: 'Expert', length: 18400, startSpeed: 8, maxSpeed: 12, spawnRate: 0.06, minDistance: 400, difficulty: 3 },
-    6: { name: 'Insane', length: 22080, startSpeed: 8.5, maxSpeed: 13, spawnRate: 0.07, minDistance: 380, difficulty: 4 },
-    7: { name: 'Demon', length: 25760, startSpeed: 9, maxSpeed: 14, spawnRate: 0.08, minDistance: 350, difficulty: 5 },
-    8: { name: 'Void', length: 29440, startSpeed: 9.5, maxSpeed: 15, spawnRate: 0.09, minDistance: 320, difficulty: 6 },
-    9: { name: 'Omega', length: 34960, startSpeed: 10, maxSpeed: 16, spawnRate: 0.10, minDistance: 300, difficulty: 7 },
-    10: { name: 'Infinity', length: 41400, startSpeed: 11, maxSpeed: 17, spawnRate: 0.12, minDistance: 280, difficulty: 8 },
-    // Quest Levels 11-20 (Medium-hard) - lengths reduced 8%
-    11: { name: 'Abyss', length: 46000, startSpeed: 11.5, maxSpeed: 18, spawnRate: 0.14, minDistance: 260, difficulty: 9 },
-    12: { name: 'Chaos', length: 50600, startSpeed: 12, maxSpeed: 19, spawnRate: 0.15, minDistance: 250, difficulty: 10 },
-    13: { name: 'Nightmare', length: 55200, startSpeed: 12.5, maxSpeed: 20, spawnRate: 0.16, minDistance: 240, difficulty: 11 },
-    14: { name: 'Oblivion', length: 59800, startSpeed: 13, maxSpeed: 21, spawnRate: 0.18, minDistance: 230, difficulty: 12 },
-    15: { name: 'Cataclysm', length: 64400, startSpeed: 13.5, maxSpeed: 22, spawnRate: 0.19, minDistance: 220, difficulty: 13 },
-    16: { name: 'Apocalypse', length: 69920, startSpeed: 14, maxSpeed: 23, spawnRate: 0.21, minDistance: 210, difficulty: 14 },
-    17: { name: 'Armageddon', length: 75440, startSpeed: 14.5, maxSpeed: 24, spawnRate: 0.22, minDistance: 200, difficulty: 15 },
-    18: { name: 'Extinction', length: 80960, startSpeed: 15, maxSpeed: 25, spawnRate: 0.24, minDistance: 190, difficulty: 16 },
-    19: { name: 'Annihilation', length: 87400, startSpeed: 15.5, maxSpeed: 26, spawnRate: 0.25, minDistance: 180, difficulty: 17 },
-    20: { name: 'Transcendence', length: 96600, startSpeed: 16, maxSpeed: 27, spawnRate: 0.27, minDistance: 170, difficulty: 18 },
-    // Quest Levels 21-30 (Ultimate Challenge) - lengths reduced 8%
-    21: { name: 'Singularity', length: 119600, startSpeed: 21, maxSpeed: 30, spawnRate: 0.32, minDistance: 110, difficulty: 21 },
-    22: { name: 'Paradox', length: 128800, startSpeed: 22, maxSpeed: 31, spawnRate: 0.33, minDistance: 108, difficulty: 22 },
-    23: { name: 'Vortex', length: 138000, startSpeed: 22, maxSpeed: 32, spawnRate: 0.34, minDistance: 105, difficulty: 23 },
-    24: { name: 'Eclipse', length: 147200, startSpeed: 23, maxSpeed: 33, spawnRate: 0.35, minDistance: 102, difficulty: 24 },
-    25: { name: 'Supernova', length: 161000, startSpeed: 23, maxSpeed: 34, spawnRate: 0.36, minDistance: 100, difficulty: 25 },
-    26: { name: 'Quantum', length: 174800, startSpeed: 24, maxSpeed: 35, spawnRate: 0.37, minDistance: 98, difficulty: 26 },
-    27: { name: 'Eternity', length: 193200, startSpeed: 24, maxSpeed: 36, spawnRate: 0.38, minDistance: 95, difficulty: 27 },
-    28: { name: 'Ragnarok', length: 211600, startSpeed: 25, maxSpeed: 37, spawnRate: 0.39, minDistance: 92, difficulty: 28 },
-    29: { name: 'Godslayer', length: 230000, startSpeed: 25, maxSpeed: 38, spawnRate: 0.40, minDistance: 90, difficulty: 29 },
-    30: { name: 'Ascension', length: 257600, startSpeed: 26, maxSpeed: 40, spawnRate: 0.42, minDistance: 88, difficulty: 30 }
+    // Quest Levels 1-10 (Balanced progression) - lengths reduced 18%
+    1: { name: 'Beginner', length: 6035, startSpeed: 6, maxSpeed: 8, spawnRate: 0.035, minDistance: 550, difficulty: 1 },
+    2: { name: 'Easy', length: 8300, startSpeed: 6.5, maxSpeed: 9, spawnRate: 0.04, minDistance: 500, difficulty: 1 },
+    3: { name: 'Medium', length: 10560, startSpeed: 7, maxSpeed: 10, spawnRate: 0.05, minDistance: 450, difficulty: 2 },
+    4: { name: 'Hard', length: 12825, startSpeed: 7.5, maxSpeed: 11, spawnRate: 0.055, minDistance: 420, difficulty: 2 },
+    5: { name: 'Expert', length: 15090, startSpeed: 8, maxSpeed: 12, spawnRate: 0.06, minDistance: 400, difficulty: 3 },
+    6: { name: 'Insane', length: 18105, startSpeed: 8.5, maxSpeed: 13, spawnRate: 0.07, minDistance: 380, difficulty: 4 },
+    7: { name: 'Demon', length: 21125, startSpeed: 9, maxSpeed: 14, spawnRate: 0.08, minDistance: 350, difficulty: 5 },
+    8: { name: 'Void', length: 24140, startSpeed: 9.5, maxSpeed: 15, spawnRate: 0.09, minDistance: 320, difficulty: 6 },
+    9: { name: 'Omega', length: 28670, startSpeed: 10, maxSpeed: 16, spawnRate: 0.10, minDistance: 300, difficulty: 7 },
+    10: { name: 'Infinity', length: 33950, startSpeed: 11, maxSpeed: 17, spawnRate: 0.12, minDistance: 280, difficulty: 8 },
+    // Quest Levels 11-20 (Medium-hard) - lengths reduced 18%
+    11: { name: 'Abyss', length: 37720, startSpeed: 11.5, maxSpeed: 18, spawnRate: 0.14, minDistance: 260, difficulty: 9 },
+    12: { name: 'Chaos', length: 41490, startSpeed: 12, maxSpeed: 19, spawnRate: 0.15, minDistance: 250, difficulty: 10 },
+    13: { name: 'Nightmare', length: 45265, startSpeed: 12.5, maxSpeed: 20, spawnRate: 0.16, minDistance: 240, difficulty: 11 },
+    14: { name: 'Oblivion', length: 49035, startSpeed: 13, maxSpeed: 21, spawnRate: 0.18, minDistance: 230, difficulty: 12 },
+    15: { name: 'Cataclysm', length: 52810, startSpeed: 13.5, maxSpeed: 22, spawnRate: 0.19, minDistance: 220, difficulty: 13 },
+    16: { name: 'Apocalypse', length: 57335, startSpeed: 14, maxSpeed: 23, spawnRate: 0.21, minDistance: 210, difficulty: 14 },
+    17: { name: 'Armageddon', length: 61860, startSpeed: 14.5, maxSpeed: 24, spawnRate: 0.22, minDistance: 200, difficulty: 15 },
+    18: { name: 'Extinction', length: 66385, startSpeed: 15, maxSpeed: 25, spawnRate: 0.24, minDistance: 190, difficulty: 16 },
+    19: { name: 'Annihilation', length: 71670, startSpeed: 15.5, maxSpeed: 26, spawnRate: 0.25, minDistance: 180, difficulty: 17 },
+    20: { name: 'Transcendence', length: 79210, startSpeed: 16, maxSpeed: 27, spawnRate: 0.27, minDistance: 170, difficulty: 18 },
+    // Quest Levels 21-30 (Ultimate Challenge) - lengths reduced 18%
+    21: { name: 'Singularity', length: 98070, startSpeed: 21, maxSpeed: 30, spawnRate: 0.32, minDistance: 110, difficulty: 21 },
+    22: { name: 'Paradox', length: 105615, startSpeed: 22, maxSpeed: 31, spawnRate: 0.33, minDistance: 108, difficulty: 22 },
+    23: { name: 'Vortex', length: 113160, startSpeed: 22, maxSpeed: 32, spawnRate: 0.34, minDistance: 105, difficulty: 23 },
+    24: { name: 'Eclipse', length: 120705, startSpeed: 23, maxSpeed: 33, spawnRate: 0.35, minDistance: 102, difficulty: 24 },
+    25: { name: 'Supernova', length: 132020, startSpeed: 23, maxSpeed: 34, spawnRate: 0.36, minDistance: 100, difficulty: 25 },
+    26: { name: 'Quantum', length: 143335, startSpeed: 24, maxSpeed: 35, spawnRate: 0.37, minDistance: 98, difficulty: 26 },
+    27: { name: 'Eternity', length: 158425, startSpeed: 24, maxSpeed: 36, spawnRate: 0.38, minDistance: 95, difficulty: 27 },
+    28: { name: 'Ragnarok', length: 173510, startSpeed: 25, maxSpeed: 37, spawnRate: 0.39, minDistance: 92, difficulty: 28 },
+    29: { name: 'Godslayer', length: 188600, startSpeed: 25, maxSpeed: 38, spawnRate: 0.40, minDistance: 90, difficulty: 29 },
+    30: { name: 'Ascension', length: 211230, startSpeed: 26, maxSpeed: 40, spawnRate: 0.42, minDistance: 88, difficulty: 30 }
 };
 
 // Unlimited Mode Configuration
@@ -2267,6 +2264,13 @@ class Obstacle {
 
     draw() {
         ctx.save();
+        
+        // Round positions to integers to prevent subpixel jitter/shaking
+        const x = Math.round(this.x);
+        const y = Math.round(this.y);
+        const w = this.w;
+        const h = this.h;
+        
         // Only apply shadow if enabled for performance
         if (perfSettings.shadowsEnabled) {
             ctx.shadowBlur = perfSettings.reducedShadowBlur;
@@ -2276,33 +2280,33 @@ class Obstacle {
 
         if (this.type === 'SPIKE') {
             ctx.beginPath();
-            ctx.moveTo(this.x, this.y + this.h);
-            ctx.lineTo(this.x + this.w / 2, this.y);
-            ctx.lineTo(this.x + this.w, this.y + this.h);
+            ctx.moveTo(x, y + h);
+            ctx.lineTo(x + w / 2, y);
+            ctx.lineTo(x + w, y + h);
             ctx.closePath();
             ctx.fill();
         } else if (this.type === 'DOUBLE_SPIKE') {
             for (let i = 0; i < 2; i++) {
-                let sx = this.x + i * 25;
+                let sx = x + i * 25;
                 ctx.beginPath();
-                ctx.moveTo(sx, this.y + this.h);
-                ctx.lineTo(sx + 12.5, this.y);
-                ctx.lineTo(sx + 25, this.y + this.h);
+                ctx.moveTo(sx, y + h);
+                ctx.lineTo(sx + 12.5, y);
+                ctx.lineTo(sx + 25, y + h);
                 ctx.closePath();
                 ctx.fill();
             }
         } else if (this.type === 'TRIPLE_SPIKE') {
             for (let i = 0; i < 3; i++) {
-                let sx = this.x + i * 40;
+                let sx = x + i * 40;
                 ctx.beginPath();
-                ctx.moveTo(sx, this.y + this.h);
-                ctx.lineTo(sx + 20, this.y);
-                ctx.lineTo(sx + 40, this.y + this.h);
+                ctx.moveTo(sx, y + h);
+                ctx.lineTo(sx + 20, y);
+                ctx.lineTo(sx + 40, y + h);
                 ctx.closePath();
                 ctx.fill();
             }
         } else if (this.type === 'SAW' || this.type === 'MOVING_SAW') {
-            ctx.translate(this.x + this.w / 2, this.y + this.h / 2);
+            ctx.translate(x + w / 2, y + h / 2);
             ctx.rotate(this.rotation * Math.PI / 180);
             const radius = this.w / 2;
             // Teeth
@@ -2330,27 +2334,27 @@ class Obstacle {
             ctx.fill();
         } else if (this.type === 'PILLAR') {
             // Tall pillar with glow
-            const grad = ctx.createLinearGradient(this.x, this.y, this.x + this.w, this.y);
+            const grad = ctx.createLinearGradient(x, y, x + w, y);
             grad.addColorStop(0, '#6633cc');
             grad.addColorStop(0.5, '#aa66ff');
             grad.addColorStop(1, '#6633cc');
             ctx.fillStyle = grad;
-            ctx.fillRect(this.x, this.y, this.w, this.h);
+            ctx.fillRect(x, y, w, h);
             // Top crystal
             ctx.fillStyle = '#cc99ff';
             ctx.beginPath();
-            ctx.moveTo(this.x - 5, this.y);
-            ctx.lineTo(this.x + this.w / 2, this.y - 20);
-            ctx.lineTo(this.x + this.w + 5, this.y);
+            ctx.moveTo(x - 5, y);
+            ctx.lineTo(x + w / 2, y - 20);
+            ctx.lineTo(x + w + 5, y);
             ctx.closePath();
             ctx.fill();
         } else if (this.type === 'LASER') {
             // Emitter at top
             ctx.fillStyle = '#333';
-            ctx.fillRect(this.x - 10, this.y - 20, 28, 25);
+            ctx.fillRect(x - 10, y - 20, 28, 25);
             ctx.fillStyle = this.laserOn ? '#ff0000' : '#440000';
             ctx.beginPath();
-            ctx.arc(this.x + 4, this.y - 8, 8, 0, Math.PI * 2);
+            ctx.arc(x + 4, y - 8, 8, 0, Math.PI * 2);
             ctx.fill();
             
             // Laser beam
@@ -2360,24 +2364,24 @@ class Obstacle {
                     ctx.shadowColor = '#ff0000';
                 }
                 ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
-                ctx.fillRect(this.x | 0, this.y | 0, this.w, this.h);
+                ctx.fillRect(x, y, w, h);
                 // Core
                 ctx.fillStyle = '#fff';
-                ctx.fillRect((this.x + 2) | 0, this.y | 0, 4, this.h);
+                ctx.fillRect(x + 2, y, 4, h);
             }
             // Warning when off
             if (!this.laserOn && this.laserTimer > 30) {
                 ctx.globalAlpha = 0.3 + Math.sin(this.animTimer * 0.5) * 0.3;
                 ctx.fillStyle = '#ff0000';
-                ctx.fillRect(this.x, this.y, this.w, this.h);
+                ctx.fillRect(x, y, w, h);
                 ctx.globalAlpha = 1;
             }
         } else {
             // BLOCK
-            ctx.fillRect(this.x, this.y, this.w, this.h);
+            ctx.fillRect(x, y, w, h);
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
-            ctx.strokeRect(this.x, this.y, this.w, this.h);
+            ctx.strokeRect(x, y, w, h);
         }
         ctx.restore();
     }
@@ -2456,8 +2460,8 @@ class PowerUp {
 
     draw() {
         ctx.save();
-        // Use integer coordinates for better performance
-        ctx.translate((this.x + this.size / 2) | 0, (this.y + this.size / 2) | 0);
+        // Use rounded coordinates to prevent subpixel jitter
+        ctx.translate(Math.round(this.x + this.size / 2), Math.round(this.y + this.size / 2));
         
         // Apply shadow only if enabled
         const useShadow = perfSettings.shadowsEnabled;
@@ -3288,10 +3292,46 @@ function drawShape(context, shape, size, color) {
     }
 }
 
+// Resolution scale factor for performance (1.0 = full resolution)
+// Lower values = better performance but slightly blurrier
+function getResolutionScale() {
+    const screenHeight = window.screen.height;
+    const isFullscreen = document.fullscreenElement || window.innerHeight >= screen.height - 100;
+    
+    // More aggressive scaling in fullscreen for smoother gameplay
+    if (isFullscreen) {
+        if (screenHeight > 1440) return 0.5;  // 4K fullscreen
+        if (screenHeight > 1080) return 0.6;  // 1440p fullscreen
+        return 0.75; // 1080p fullscreen
+    }
+    
+    // Windowed mode can use higher resolution
+    if (screenHeight > 1440) return 0.7;
+    if (screenHeight > 1080) return 0.85;
+    return 1.0;
+}
+let RESOLUTION_SCALE = getResolutionScale();
+
+// Update resolution scale on fullscreen change
+document.addEventListener('fullscreenchange', () => {
+    RESOLUTION_SCALE = getResolutionScale();
+    resize();
+});
+
 function resize() {
     const oldHeight = canvas.height || window.innerHeight;
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    
+    // Use scaled resolution for better performance on high-res displays
+    const displayWidth = window.innerWidth;
+    const displayHeight = window.innerHeight;
+    
+    // Apply resolution scaling - lower internal resolution for better FPS
+    canvas.width = Math.floor(displayWidth * RESOLUTION_SCALE);
+    canvas.height = Math.floor(displayHeight * RESOLUTION_SCALE);
+    
+    // CSS scales the canvas back up to fill the screen
+    canvas.style.width = displayWidth + 'px';
+    canvas.style.height = displayHeight + 'px';
     
     // Calculate how much the ground position changed
     const groundY = canvas.height - GROUND_HEIGHT;
@@ -3300,7 +3340,7 @@ function resize() {
     
     // Cap spawn width to prevent cheating with ultra-wide screens
     // Use reference width or actual width, whichever is smaller
-    spawnWidth = Math.min(canvas.width, REFERENCE_WIDTH);
+    spawnWidth = Math.min(canvas.width, REFERENCE_WIDTH * RESOLUTION_SCALE);
     
     // Clear gradient cache on resize (gradients are canvas-size dependent)
     clearGradientCache();
@@ -4325,8 +4365,8 @@ function update(dt = 1) {
     if (gameState !== 'PLAYING') return;
 
     // Calculate distance-based score (update DOM only when score changes)
-    const newScore = Math.floor(distanceTraveled / 100);
-    if (newScore !== score) {
+    const newScore = Math.floor(distanceTraveled / 100) || 0;
+    if (isFinite(newScore) && newScore !== score) {
         score = newScore;
         const scoreEl = getCachedElement('score');
         if (scoreEl) scoreEl.innerText = score;
@@ -4359,9 +4399,21 @@ function update(dt = 1) {
     smoothGameSpeed += (targetGameSpeed - smoothGameSpeed) * SPEED_LERP_FACTOR * dt;
     gameSpeed = smoothGameSpeed;
 
-    distanceTraveled += gameSpeed * slowMotionFactor * dt;
-    bgOffset -= gameSpeed * 0.2 * slowMotionFactor * dt; // Parallax background
-    bgTime += 0.01 * dt;
+    // Update distance traveled (with safety check to prevent NaN)
+    const distanceIncrement = gameSpeed * slowMotionFactor * dt;
+    if (isFinite(distanceIncrement)) {
+        distanceTraveled += distanceIncrement;
+    }
+    
+    // Update background offset (with safety check)
+    const bgIncrement = gameSpeed * 0.2 * slowMotionFactor * dt;
+    if (isFinite(bgIncrement)) {
+        bgOffset -= bgIncrement;
+    }
+    const bgTimeIncrement = 0.01 * dt;
+    if (isFinite(bgTimeIncrement)) {
+        bgTime += bgTimeIncrement;
+    }
 
     // Power-up Timers (adjusted for delta time)
     if (isBoosting) {
@@ -4583,6 +4635,15 @@ function update(dt = 1) {
 function drawBackground() {
     // Use simplified backgrounds for better performance
     const simplify = perfSettings.simplifyBackgrounds;
+    
+    // Ultra-simplified background for maximum performance
+    if (simplify) {
+        // Just use a solid dark gradient - no fancy effects
+        ctx.fillStyle = '#0a0a15';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        return;
+    }
+    
     const maxStars = perfSettings.maxStars || 50;
     const maxWaves = perfSettings.maxAuroraWaves || 3;
     
@@ -5051,10 +5112,14 @@ function drawBackground() {
                 { x: 0.7, y: 0.5, r: 200, c1: '#0066ff', c2: '#00aaff' },
                 { x: 0.5, y: 0.2, r: 150, c1: '#aa00ff', c2: '#ff00aa' }
             ];
+            const safeBgOffset = isFinite(bgOffset) ? bgOffset : 0;
             for (let neb of nebulas) {
-                const nx = (neb.x * canvas.width + bgOffset * 0.03) % (canvas.width + 300) - 150;
+                const nx = (neb.x * canvas.width + safeBgOffset * 0.03) % (canvas.width + 300) - 150;
+                const ny = neb.y * canvas.height;
+                // Safety check for gradient coordinates
+                if (!isFinite(nx) || !isFinite(ny)) continue;
                 ctx.globalAlpha = 0.12;
-                const nebGrad = ctx.createRadialGradient(nx, neb.y * canvas.height, 0, nx, neb.y * canvas.height, neb.r);
+                const nebGrad = ctx.createRadialGradient(nx, ny, 0, nx, ny, neb.r);
                 nebGrad.addColorStop(0, neb.c1);
                 nebGrad.addColorStop(0.5, neb.c2);
                 nebGrad.addColorStop(1, 'transparent');
@@ -7092,7 +7157,11 @@ function loop(currentTime) {
     frameTimestamp = currentTime;
     
     // Calculate delta time with high-precision timing
-    if (lastTime === 0) lastTime = currentTime;
+    if (lastTime === 0) {
+        lastTime = currentTime;
+        deltaTime = 1; // Initialize to 1 (60fps equivalent)
+        return; // Skip first frame to establish timing
+    }
     const rawDelta = currentTime - lastTime;
     lastTime = currentTime;
     
@@ -7104,7 +7173,12 @@ function loop(currentTime) {
     
     // Normalize delta time to target FPS and cap to prevent huge jumps
     deltaTime = rawDelta / TARGET_FRAME_TIME;
-    deltaTime = Math.min(deltaTime, 1.5); // Tighter cap for smoother gameplay
+    deltaTime = Math.min(Math.max(deltaTime, 0.5), 2.0); // Clamp between 0.5 and 2.0
+    
+    // Ensure deltaTime is never NaN or invalid
+    if (!isFinite(deltaTime)) {
+        deltaTime = 1;
+    }
     
     // Track frame timing for performance monitoring
     updateFrameStats(rawDelta);

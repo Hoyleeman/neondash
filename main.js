@@ -4129,8 +4129,11 @@ function update(dt = 1) {
         }
         
         // Pull in nearby powerups (all types, not just coins)
-        const magnetRange = 250; // Attraction range in pixels
-        const magnetStrength = 8; // How fast powerups are pulled
+        // SUPER MAGNET when boosting - pulls everything below you!
+        const baseRange = 300;
+        const boostRangeMultiplier = isBoosting ? 2.5 : 1; // 2.5x range when boosting
+        const magnetRange = baseRange * boostRangeMultiplier;
+        const magnetStrength = isBoosting ? 18 : 10; // Stronger pull when boosting
         const playerCenterX = player.x + player.size / 2;
         const playerCenterY = player.y + player.size / 2;
         
@@ -4140,11 +4143,18 @@ function update(dt = 1) {
                 const dy = playerCenterY - (pu.y + pu.size / 2);
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 
-                if (dist < magnetRange && dist > 5) {
+                // When boosting, extend range especially downward (below player)
+                let effectiveRange = magnetRange;
+                if (isBoosting && dy < 0) {
+                    // Powerup is below player - extra range!
+                    effectiveRange = magnetRange * 1.5;
+                }
+                
+                if (dist < effectiveRange && dist > 5) {
                     // Pull powerup toward player
-                    const pullForce = (magnetStrength * dt) / Math.max(dist * 0.1, 1);
-                    pu.x += (dx / dist) * pullForce * 10;
-                    pu.y += (dy / dist) * pullForce * 10;
+                    const pullForce = (magnetStrength * dt) / Math.max(dist * 0.08, 1);
+                    pu.x += (dx / dist) * pullForce * 12;
+                    pu.y += (dy / dist) * pullForce * 12;
                 }
             }
         }

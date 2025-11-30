@@ -37,18 +37,14 @@ body {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    /* Width/height set by JavaScript for resolution scaling */
     /* Performance optimizations */
-    will-change: contents;
+    will-change: transform;
     image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-    /* GPU acceleration and isolation */
+    image-rendering: pixelated;
+    /* GPU acceleration */
     transform: translateZ(0);
     backface-visibility: hidden;
-    contain: strict;
-    /* Smooth rendering in fullscreen */
-    -webkit-transform: translate3d(0, 0, 0);
 }
 
 .ui-layer {
